@@ -1,0 +1,239 @@
+.\" Man page generated from reStructuredText.
+.
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.TH "SNAKELAND" "1" "Dec 11, 2023" "" "snakeland"
+.SH NAME
+snakeland \- Instant Python Script Installer.
+.SH SYNOPSIS
+.nf
+snakeland \-\-version \-\-help \-\-license
+snakeland install [CONFIG]
+snakeland findpy3 [\-\-later 3.xx] | [\-\-older 3.xx] | \-\-latest | [\-\-range 3.xx\-3.yy] | [\-\-order 3.x,..,3.yy]
+.fi
+.sp
+.SH SUMMARY
+.sp
+Instant Python script installer.
+.SH QUICK START
+.sp
+Install by config
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ snakeland install snakeland\-APP.conf
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.sp
+Find python3 command.
+.INDENT 0.0
+.INDENT 3.5
+.sp
+.nf
+.ft C
+$ snakeland findpy3 \-\-later 3.8
+  /usr/bin/python3.12
+$ snakeland findpy3 \-\-older 3.11
+  /usr/bin/python3.9
+$ snakeland findpy3 \-\-latest
+  /usr/bin/python3.12
+$ snakeland range 3.5\-3.10
+  /usr/bin/python3.9
+$ snakeland range \-\-order 3.13,3.12,3.11,3.10,3.9
+  /usr/bin/python3.12
+.ft P
+.fi
+.UNINDENT
+.UNINDENT
+.SH DESCRIPTION
+.sp
+snakeland is instant python3 script installer.
+The script wrapper is make on /usr/local/bin as cui command.
+.SH ARGUMENT
+.INDENT 0.0
+.TP
+.B \-\-version, \-\-help, \-\-license
+.UNINDENT
+.nf
+Print version, help message, license.
+.fi
+.sp
+.INDENT 0.0
+.TP
+.B \-\-latest
+.UNINDENT
+.nf
+findpy3 sub command only
+Print latest python3 command path.
+.fi
+.sp
+.INDENT 0.0
+.TP
+.B \-\-later [PYTHONVERSION]
+.UNINDENT
+.nf
+findpy3 sub command only
+Print PYTHONVERSION later command path.
+.fi
+.sp
+.INDENT 0.0
+.TP
+.B \-\-older [PYTHONVERSION]
+.UNINDENT
+.nf
+findpy3 sub command only
+Print PYTHONVERSION older command path.
+.fi
+.sp
+.INDENT 0.0
+.TP
+.B \-\-range 3.xx\-3.yy
+.UNINDENT
+.nf
+findpy3 sub command only
+Print latest python command path in 3.xx \- 3.yy.
+.fi
+.sp
+.INDENT 0.0
+.TP
+.B \-\-order 3.x,...,3.yy
+.UNINDENT
+.nf
+findpy3 sub command only
+Print first matched python command path.
+.fi
+.sp
+.SH CONFIG
+.sp
+The Config is in restricted toml format.
+.nf
+
+OSCHECK: Describe OS names. The string is similar to \(aquname \-s\(aq cmd.
+.in +2
+.in +2
+default section, optional key.
+.in -2
+Darwin: Mac OS
+Linux: Linux based OS
+FreeBSD: FreeBSD OS
+e.g.
+.in +2
+OSCHECK = [\(aqDarwin\(aq, \(aqLinux\(aq, \(aqFreeBSD\(aq]
+
+.in -2
+.in -2
+DSTBASEDIR: Destination Base Directory. Recommend path is \(aq/usr/local/libexec/CMDNAME\(aq.
+.in +2
+default section, essential key.
+
+.in -2
+INSTALLCMD: Install command path. default path is \(aq/usr/local/bin\(aq.
+.in +2
+default section, optional key.
+
+.in -2
+CMDNAME: The command name. The command file is made on INSTALLCMD directory.
+.in +2
+default section, essential key.
+
+.in -2
+TARGETPY3: The python3 script path. The script is executed by python3.xx cmd.
+.in +2
+default section, optional key. (Either of TARGETPY3, TARGETCMD is always required.)
+
+.in -2
+SHEBANG: The shebang of CMDNAME file. default path is \(aq/bin/sh\(aq.
+.in +2
+default section, optional key.
+
+.in -2
+PY3VERSION: Execute python3 of the version. The string is similar to \(aqfindpy3\(aq options.
+.in +2
+.in +2
+default section, optional key.
+.in -2
+\(aq3.x later\(aq  : python 3.x later.
+\(aq3.x older\(aq  : python 3.x older.
+\(aqlatest\(aq     : Latest python3
+\(aq3.xx \- 3.yy\(aq: Latest python3 in 3.xx \- 3.yy.
+\(aq3.6 3.7 3.8\(aq: First found python3 in 3.6, 3.7, 3.8.
+
+.in -2
+DSTDIR: Relative path of DSTBASEDIR. You cannot set it to a directory above the DSTBASEDIR.
+.in +2
+source file section, essential key.
+
+.in -2
+FMODE: File mode of the section file. default mode is 644.
+.in +2
+source file section, optional key.
+
+.in -2
+Example of config:
+.in +2
+DSTBASEDIR = \(aq/usr/local/libexec/CMDNAMEAPP/\(aq
+CMDNAME   = \(aqCMDNAMEAPP\(aq
+TARGETPY3 = \(aq/usr/local/libexec/CMDNAMEAPP/CMDNAMEAPP.py\(aq
+[script/CMDNAMEAPP.py]
+.in +2
+DSTDIR = \(aq.\(aq
+.in -2
+.in -2
+.fi
+.sp
+.SH BUGS
+.sp
+Please report bugs to the e\-mail: <voice[ATmark]miketurkey.com>
+.SH AUTHOR
+.sp
+Mike Turkey <voice[ATmark]miketurkey.com>
+.SH LICENSE
+.nf
+GPLv3 LICENSE
+2023 Copyright Mike Turkey
+ABSOLUTELY NO WARRANTY
+.fi
+.sp
+.sp
+This software is licensed under the terms of the GNU General Public License, version 3 (GPLv3), with an additional clause prohibiting the use of this software for machine learning purposes. Please refer to the LICENSE file for the complete license text and additional terms.
+.nf
+See also
+.in +2
+GPL\-3 Licence, \fI\%https://www.gnu.org/licenses/gpl\-3.0.html.en\fP
+Mike Turkey.com, \fI\%https://miketurkey.com\fP
+.in -2
+.fi
+.sp
+.SH COPYRIGHT
+2023, Mike Turkey
+.\" Generated by docutils manpage writer.
+.
