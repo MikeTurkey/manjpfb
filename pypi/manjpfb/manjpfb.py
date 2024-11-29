@@ -51,15 +51,47 @@ else:
 
 
 class Main_manjpfb(object):
-    version: str = '0.0.1'
+    version:     str = '0.0.2'
     versiondate: str = '30 Nov 2024'
 
     @staticmethod
     def show_version():
         version = Main_manjpfb.version
         versiondate = Main_manjpfb.versiondate
-        meses = ['manjpfb written by MikeTurkey', 'ver {0}, {1}'.format(version, versiondate), '2024 Copyright MikeTurkey ALL RIGHT RESEVED.', 'ABSOLUTELY NO WARRANTY.', 'Software: GPLv3 License including a prohibition clause for AI training.', 'Document: GFDL1.3 License including a prohibition clause for AI training.', 'FreeBSD man documents were translated by MikeTurkey using Deep-Learning.', '', 'SYNOPSIS', '  manjpfb [OPT] [mannum] [name]', '', 'Summary', '  FreeBSD Japanese-man Pager.', '', 'Description', '  jpmanf is pager of FreeBSD japanese man using python3.', '  The program does not store man-data and download it with each request.',
-                 '  Since it is a Python script, it is expected to run on many operating systems in the future.', '  We can read the FreeBSD japanese man on many Operating Systems.', '  There is man-data that is not fully translated, but this is currently by design.', '  Please note that I do not take full responsibility for the translation of the documents.', '', 'Example', '  $ manjpfb ls', '      print ls man.', '  $ manjpfb 1 head', '      print head 1 section man.', '  $ manjpfb --version', '      Show the message', '  $ manjpfb --listman', '      Show man page list.', '  $ manjpfb --listos', '      Show os name list of man.', '']
+        meses = ['manjpfb written by MikeTurkey',
+                 'ver {0}, {1}'.format(version, versiondate),
+                 '2024 Copyright MikeTurkey ALL RIGHT RESEVED.',
+                 'ABSOLUTELY NO WARRANTY.',
+                 'Software: GPLv3 License including a prohibition clause for AI training.',
+                 'Document: GFDL1.3 License including a prohibition clause for AI training.',
+                 'FreeBSD man documents were translated by MikeTurkey using Deep-Learning.',
+                 '',
+                 'SYNOPSIS',
+                 '  manjpfb [OPT] [mannum] [name]',
+                 '',
+                 'Summary',
+                 '  FreeBSD Japanese-man Pager.',
+                 '',
+                 'Description',
+                 '  jpmanf is pager of FreeBSD japanese man using python3.',
+                 '  The program does not store man-data and download it with each request.',
+                 '  Since it is a Python script, it is expected to run on many operating systems in the future.',
+                 '  We can read the FreeBSD japanese man on many Operating Systems.',
+                 '  There is man-data that is not fully translated, but this is currently by design.',
+                 '  Please note that I do not take full responsibility for the translation of the documents.',
+                 '',
+                 'Example',
+                 '  $ manjpfb ls',
+                 '      print ls man.',
+                 '  $ manjpfb 1 head',
+                 '      print head 1 section man.',
+                 '  $ manjpfb --version',
+                 '      Show the message',
+                 '  $ manjpfb --listman',
+                 '      Show man page list.',
+                 '  $ manjpfb --listos',
+                 '      Show os name list of man.',
+                 '']
         for s in meses:
             print(s)
         exit(0)
@@ -67,14 +99,18 @@ class Main_manjpfb(object):
     def main(self):
         mainfunc = Mainfunc
         _main_man = _Main_man
-        t = (104, 116, 116, 112, 115, 58, 47, 47, 109, 105, 107, 101, 116, 117, 114, 107, 101, 121,
-             46, 99, 111, 109, 47, 106, 112, 109, 97, 110, 102, 47, 100, 98, 47, 104, 97, 115, 104, 47)
-        baseurl = ''.join([chr(i)for i in t])
-        t = (104, 116, 116, 112, 115, 58, 47, 47, 109, 105, 107, 101, 116, 117, 114, 107, 101, 121, 46,
-             99, 111, 109, 47, 106, 112, 109, 97, 110, 102, 47, 114, 111, 111, 116, 46, 116, 111, 109, 108)
-        roottomlurl = ''.join([chr(i)for i in t])
-        opt = types.SimpleNamespace(
-            manhashfpath='', mannum='', manname='', listos=False, listman=False, release='')
+        t = (104, 116, 116, 112, 115, 58, 47, 47, 109, 105, 107, 101,
+             116, 117, 114, 107, 101, 121, 46, 99, 111, 109, 47, 106,
+             112, 109, 97, 110, 102, 47, 100, 98, 47, 104, 97, 115,
+             104, 47)
+        baseurl = ''.join([chr(i) for i in t])
+        t = (104, 116, 116, 112, 115, 58, 47, 47, 109, 105, 107, 101,
+             116, 117, 114, 107, 101, 121, 46, 99, 111, 109, 47, 106,
+             112, 109, 97, 110, 102, 47, 114, 111, 111, 116, 46, 116,
+             111, 109, 108)
+        roottomlurl = ''.join([chr(i) for i in t])
+        opt = types.SimpleNamespace(manhashfpath='', mannum='', manname='',
+                                    listos=False, listman=False, release='')
         arg1 = ''
         arg2 = ''
         on_manhash = False
@@ -119,9 +155,9 @@ class Main_manjpfb(object):
         if opt.listman:
             _main_man.show_listman(roottomlurl, vernamekey)
         if arg2 == '':
-            opt.manname = arg1
+            opt.manname = arg1  # e.g. args: ls
         else:
-            opt.mannum = arg1
+            opt.mannum = arg1  # e.g. args: 1 ls
             opt.manname = arg2
         if opt.manhashfpath == '':
             rootstr = mainfunc.loadstring_url(roottomlurl)
@@ -131,9 +167,9 @@ class Main_manjpfb(object):
             s = mainfunc.loadstring_url(tgturl)
             tomldic = tomllib.loads(s)
         else:
-            with open(opt.manhashfpath, 'rb')as fp:
+            with open(opt.manhashfpath, 'rb') as fp:
                 tomldic = tomllib.load(fp)
-        fnameurldic = dict()
+        fnameurldic = dict()  # key: fname, value: urlpath
         tomldic_osname = 'None'
         for k, v in tomldic.items():
             if k == 'OSNAME':
@@ -141,7 +177,7 @@ class Main_manjpfb(object):
                 continue
             fname = k
             hashdg = v['hash']
-            s = baseurl+'/'+hashdg[0:2]+'/'+hashdg+'/'+fname
+            s = baseurl + '/' + hashdg[0:2] + '/' + hashdg + '/' + fname
             tgturl = mainfunc.normurl(s)
             fnameurldic[fname] = tgturl
         if root_osname != tomldic_osname:
@@ -155,10 +191,10 @@ class Main_manjpfb(object):
                     opt.mannum)
                 print(errmes, file=sys.stderr)
                 exit(1)
-            fnameurldictkeys = [opt.manname+'.'+opt.mannum]
+            fnameurldictkeys = [opt.manname + '.' + opt.mannum]
         else:
             fnameurldictkeys = ['{0}.{1}'.format(
-                opt.manname, i)for i in range(1, 10)]
+                opt.manname, i) for i in range(1, 10)]
         for fname in fnameurldictkeys:
             tgturl = fnameurldic.get(fname, '')
             if tgturl != '':

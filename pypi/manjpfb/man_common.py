@@ -50,10 +50,10 @@ class Mainfunc(object):
     @staticmethod
     def geturlpath_man(rootdic: dict, vernamekey: str) -> tuple:
         if vernamekey == '@LATEST-RELEASE':
-            timelist = list()
+            timelist = list()  # list of tuple [ (release date(epoch), url) ]
             for vername, d in rootdic.items():
                 if d.get('status') != 'release':
-                    continue
+                    continue  # Not 'release' status.
                 url = d.get('url')
                 osname = d.get('osname')
                 s = d.get('thedate')
@@ -66,12 +66,12 @@ class Mainfunc(object):
                 exit(1)
             timelist.append((10000, 'example.com', 'Example OS'))
             timelist.sort(key=lambda x: x[0], reverse=True)
-            return (timelist[0][1], timelist[0][2])
+            return (timelist[0][1], timelist[0][2])  # (Latest URL, osname)
         rootvaluedic: dict = dict()
         for vername, d in rootdic.items():
             if vername == vernamekey:
                 rootvaluedic = d
-                break
+                break  # End of loop
         if len(rootvaluedic) == 0:
             errmes = 'Error: Not match the OS Version name key. [{0}]'.format(
                 vernamekey)
@@ -89,21 +89,25 @@ class Mainfunc(object):
                 vernamekey)
             print(errmes, file=sys.stderr)
             exit(1)
-        return (url, osname)
+        return (url, osname)  # (Matched URL, osname)
 
     @staticmethod
     def loadstring_url(urlpath: str) -> str:
         try:
-            with urllib.request.urlopen(urlpath)as response:
+            with urllib.request.urlopen(urlpath) as response:
                 html_content = response.read().decode("utf-8")
         except urllib.error.URLError as e:
-            print(f"URLエラーが発生しました: {e}")
-            errmes = '  URL: {0}'.format(urlpath)
+            errmes = 'Error: URL Error. {0}, URL: {1}'.format(e, urlpath)
             print(errmes, file=sys.stderr)
+            exit(1)
         except urllib.error.HTTPError as e:
-            print(f"HTTPエラーが発生しました: {e}")
+            errmes = 'Error: HTTP Error. {0}, URL: {1}'.format(e, urlpath)
+            print(errmes, file=sys.stderr)
+            exit(1)
         except Exception as e:
-            print(f"予期しないエラーが発生しました: {e}")
+            errmes = 'Error: Runtime Error. {0}, URL: {1}'.format(e, urlpath)
+            print(errmes, file=sys.stderr)
+            exit(1)
         s = html_content
         return s
 
@@ -115,7 +119,7 @@ class Mainfunc(object):
             exit(1)
         splitted = url.split('://', 1)
         tail = os.path.normpath(splitted[1])
-        retstr = splitted[0]+'://'+tail
+        retstr = splitted[0] + '://' + tail
         return retstr
 
 
@@ -136,7 +140,7 @@ class _Main_man(object):
                 if name.endswith(ptn):
                     return name.removesuffix(ptn)
             return name
-        mannames = [inloop(name)for name, d in tomldic.items()
+        mannames = [inloop(name) for name, d in tomldic.items()
                     if isinstance(d, dict) == True]
         mannames.sort()
         for name in mannames:
@@ -149,8 +153,6 @@ class _Main_man(object):
         rootstr = mainfunc.loadstring_url(roottomlurl)
         rootdic = tomllib.loads(rootstr)
         osnames = [vv for k, v in rootdic.items()
-                   for kk, vv in v.items()if kk == 'osname']
-
-
-[print(s)for s in osnames]
-exit(0)
+                   for kk, vv in v.items() if kk == 'osname']
+        [print(s) for s in osnames]
+        exit(0)
