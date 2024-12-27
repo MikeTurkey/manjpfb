@@ -52,6 +52,28 @@ import typing
 
 class Mainfunc(object):
     @staticmethod
+    def getid_linux() -> str:
+        if sys.platform != 'linux':
+            return ''
+        linuxid: str = ''
+        fpath: str = '/etc/os-release'
+        idrow: str = ''
+        try:
+            with open(fpath, 'rt') as fp:
+                for row in fp:
+                    if row.startswith('ID='):
+                        idrow = row.rstrip()
+                        break
+        except:
+            return ''
+        if idrow == '':
+            return ''
+        s = idrow.removeprefix('ID')
+        s = s.removeprefix('=')
+        retid: str = s.strip()
+        return retid
+
+    @staticmethod
     def geturlpath_man(rootdic: dict, vernamekey: str) -> tuple[list, str, str, str, str]:
         mainfunc = Mainfunc
         errmes: str

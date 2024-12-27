@@ -1,4 +1,8 @@
 
+ver 0.0.6, 27 Dec 2024
+  Add pager selector.
+  Bugfix, Invalid temporary directory.
+
 ver 0.0.5, 27 Dec 2024
   Rewrite source code.
   Add cache function. Man Pager show fastly.

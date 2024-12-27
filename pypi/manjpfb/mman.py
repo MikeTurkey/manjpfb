@@ -112,7 +112,7 @@ class Man_cache(object):
     def tmpdir(self):
         return self._tmpdir
 
-    def _makefpath_tmpdir(self) -> tuple:
+    def _makefpath_tmpdir(self) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path | None]:
         systemtmpdir: typing.Final[str] = tempfile.gettempdir()
         date: typing.Final[str] = time.strftime('%Y%m%d', time.localtime())
         tuplekey: typing.Final[tuple] = (
@@ -121,7 +121,7 @@ class Man_cache(object):
             tuplekey, '')
         tmpdir: pathlib.Path
         tmpdir1st: pathlib.Path
-        tmpdir2nd: pathlib.Path
+        tmpdir2nd: pathlib.Path | None
         s: str = ''
         if self.platform != 'win32':
             uid: typing.Final[str] = str(os.getuid())
@@ -137,7 +137,6 @@ class Man_cache(object):
             s = '/mman_{0}/{1}/'.format(date, uid)
             tmpdir2nd = pathlib.Path(os.path.abspath(systemtmpdir + s))
         elif self.platform == 'win32':
-            print('Warning: Not test windows.')
             if suffix_cmdname == '':
                 errmes = 'Error: Unknown _suffix_cmdnames key. [{0}]'.format(
                     tuplekey)
@@ -147,6 +146,7 @@ class Man_cache(object):
             tmpdir = pathlib.Path(os.path.abspath(systemtmpdir + s))
             s = '\\mman_{0}'.format(date)
             tmpdir1st = pathlib.Path(os.path.abspath(systemtmpdir + s))
+            tmpdir2nd = None
         return (tmpdir, tmpdir1st, tmpdir2nd)
 
     def init(self, os2: str, lang: str, arch: str):
@@ -207,10 +207,10 @@ class Man_cache(object):
             if f.is_dir() != True:
                 continue
             if f == nowtmpdir:
-                continue  # nowtmpdir, Do no remove.
+                continue
             s = str(f.relative_to(systemtmpdir))
             if recpl.match(s) == None:
-                continue  # Not mman_YYYYMMDD directory.
+                continue
             shutil.rmtree(f)
         return
 
@@ -995,6 +995,34 @@ class Man_mantoml(object):
 
 class _Main_man(object):
     @staticmethod
+    def enable_terminal() -> tuple[bool | None, str]:
+        rettrue: typing.Final[tuple] = (True, '')
+        retnone: typing.Final[tuple] = (None, '')
+        if sys.platform in ['darwin', 'win32']:
+            return rettrue
+        ttyname: str = os.ttyname(sys.stdout.fileno())
+        if sys.platform.startswith('freebsd'):
+            if ttyname.startswith('/dev/pts'):
+                return rettrue
+            elif ttyname.startswith('/dev/ttyv'):
+                return False, 'FreeBSD_vt'
+            else:
+                return retnone
+        elif sys.platform.startswith('openbsd'):
+            if ttyname.startswith('/dev/ttyp'):
+                return rettrue
+            elif ttyname.startswith('/dev/ttyC'):
+                return False, 'OpenBSD_vt'
+            else:
+                return retnone
+        elif sys.platform.startswith('linux'):
+            if ttyname.startswith('/dev/pts'):
+                return rettrue
+            else:
+                return retnone
+        return retnone
+
+    @staticmethod
     def norm_punctuation(pagerstr: str) -> str:
         ptn = r'[\u2011]|[\u2012]|[\u2013]'
         return re.sub(ptn, '-', pagerstr)
@@ -1100,7 +1128,7 @@ class _Main_man(object):
 
 
 class Main_manXXYY(object):
-    version:     str = '0.0.5'
+    version:     str = '0.0.6'
     versiondate: str = '27 Dec 2024'
 
     def __init__(self):
@@ -1244,6 +1272,45 @@ class Main_manXXYY(object):
         self._manenv_arch = arch
         return
 
+    def check_terminal(self, lang: str):
+        subr = _Main_man
+        errmes: str = ''
+        warnmes: str = ''
+        if lang == 'eng':
+            return
+        enable_term: bool | None
+        kind: str
+        enable_term, kind = subr.enable_terminal()
+        if enable_term == True:
+            return
+        elif enable_term == False:
+            if kind == 'FreeBSD_vt':
+                errmes = 'Error: Can not print on virtual console. e.g. /dev/ttyv0\n'\
+                    '  Psendo Terminal only(X terminal, Network terminal). e.g. /dev/pts/0'
+            elif kind == 'OpenBSD_vt':
+                errmes = 'Error: Can not print on virtual console. e.g. /dev/ttyC0\n'\
+                    '  Psendo Terminal only(X terminal, Network terminal). e.g. /dev/ttyp0'
+            print(errmes, file=sys.stderr)
+            exit(1)
+        elif enable_term == None:
+            warnmes = 'Warning: Not support terminal.'
+            print(warnmes)
+            return
+        errmes = 'Error: Runtime Error in check_terminal()'
+        print(errmes, file=sys.stderr)
+        exit(1)
+
+    @staticmethod
+    def change_pager():
+        mainfunc = Mainfunc
+        linuxid: str = ''
+        if sys.platform == 'linux':
+            linuxid = mainfunc.getid_linux()
+        if linuxid == 'alpine':
+            os.environ['PAGER'] = 'more'
+            return
+        return
+
     def main(self, os2: str = '', lang: str = '', arch: str = ''):
         mainfunc = Mainfunc
         _main_man = _Main_man
@@ -1326,6 +1393,7 @@ class Main_manXXYY(object):
             errmes = 'Error: Runtime Error. Invalid --listman[N]'
             print(errmes)
             exit(1)
+        self.check_terminal(lang)
         if arg2 == '':
             opt.manname = arg1  # e.g. args: ls
         else:
@@ -1377,6 +1445,7 @@ class Main_manXXYY(object):
         elif sys.platform == 'win32':
             s = unicodedata.normalize('NFC', s)
         s = _main_man.norm_punctuation(s)
+        self.change_pager()
         pydoc.pager(s)
         print('OSNAME(man):', mantomlobj.osname)
         print(roottomlobj.message)
