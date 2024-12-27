@@ -2,10 +2,10 @@
 ####################  SOFTWARE LICENSE   #############################
 ######################################################################
 
-manjpfb, FreeBSD Japanese-man pager.
-Copyright (C) 2024 Mike Turkey(real name: Takaaki Watanabe)
-contact: voice[ATmark]miketurkey.com
-license: GPLv3 License
+manjpfb, FreeBSD Japanese-man Pager.
+COPYRIGHT 2024 MikeTurkey (real name: Takaaki Watanabe)
+Contact: voice[ATmark]miketurkey.com
+License: GPLv3 License including a prohibition clause for AI training.
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -42,13 +42,90 @@ see also
     Mike Turkey.com: https://miketurkey.com/
 
 ######################################################################
-####################  DOCUMENT LICENSE   #############################
+############  FREEBSD MAN DOCUMENTATION LICENSE  #####################
 ######################################################################
 
-Copyright 2024 Mike Turkey(real name: Takaaki Watanabe)
+COPYRIGHT 2024 MikeTurkey (real name: Takaaki Watanabe)
 FreeBSD man documents were translated by MikeTurkey using Deep-Learning.
-contact: voice[ATmark]miketurkey.com
-license: GFDL1.3 License
+Contact: voice[ATmark]miketurkey.com
+License: FreeBSD Document License including a prohibition clause
+	 for AI training.
+
+Redistribution and use in source (AsciiDoc) and 'compiled' forms (HTML,
+PDF, EPUB and so forth) with or without modification, are permitted
+provided that the following conditions are met:
+
+1.  Redistributions of source code (AsciiDoc) must retain the above
+    copyright notice, this list of conditions and the following
+    disclaimer as the first lines of this file unmodified.
+
+2.  Redistributions in compiled form (Converted to PDF, EPUB and other
+    formats) must reproduce the above copyright notice, this list of
+    conditions and the following disclaimer in the documentation and/or
+    other materials provided with the distribution.
+
+3.  ADDITIONAL MACHINE LEARNING PROHIBITION CLAUSE:  
+    You may not use this documentation or any part thereof for the
+    purpose of training or developing machine learning models,
+    algorithms, or systems, without prior written permission from the
+    copyright holder. This prohibition applies to any use that
+    involves automated extraction of knowledge or features from the
+    documentation, including but not limited to training neural
+    networks, statistical models, or other artificial intelligence
+    technologies.
+
+THIS DOCUMENTATION IS PROVIDED BY MIKETURKEY "AS IS" AND ANY EXPRESS
+OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL MIKETURKEY BE LIABLE FOR ANY DIRECT,
+INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS DOCUMENTATION, EVEN IF ADVISED OF
+THE POSSIBILITY OF SUCH DAMAGE.
+
+Manual Pages
+
+Some FreeBSD manual pages contain text from the IEEE Std 1003.1, 2004
+Edition, Standard for Information Technology - Portable Operating System
+Interface (POSIX®) specification. These manual pages are subject to the
+following terms:
+
+  The Institute of Electrical and Electronics Engineers and The Open
+  Group, have given us permission to reprint portions of their
+  documentation.
+
+  In the following statement, the phrase "this text" refers to portions
+  of the system documentation.
+
+  Portions of this text are reprinted and reproduced in electronic form
+  in the FreeBSD manual pages, from IEEE Std 1003.1, 2004 Edition,
+  Standard for Information Technology - Portable Operating System
+  Interface (POSIX), The Open Group Base Specifications Issue 6,
+  Copyright© 2001-2004 by the Institute of Electrical and Electronics
+  Engineers, Inc and The Open Group. In the event of any discrepancy
+  between these versions and the original IEEE and The Open Group
+  Standard, the original IEEE and The Open Group Standard is the referee
+  document. The original Standard can be obtained online at
+  https://www.opengroup.org/membership/forums/platform/unix.
+
+  This notice shall appear on any product containing this material.
+
+See also:
+    FDL: https://www.freebsd.org/copyright/freebsd-doc-license/
+    Mike Turkey: https://miketurkey.com/
+
+######################################################################
+############  GNU/Linux man Documentation License ####################
+############  Owner's Document License  ##############################
+######################################################################
+
+COPYRIGHT 2024 MikeTurkey(real name: Takaaki Watanabe)
+Man documents were translated by MikeTurkey using Deep-Learning.
+Contact: voice[ATmark]miketurkey.com
+License: GFDL1.3 License including a prohibition clause for AI training.
 
 Permission is granted to copy, distribute and/or modify this document
 under the terms of the GNU Free Documentation License, Version 1.3

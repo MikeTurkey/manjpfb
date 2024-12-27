@@ -39,7 +39,7 @@
 #     GPL-3 Licence: https://www.gnu.org/licenses/gpl-3.0.html.en
 #     Mike Turkey.com: https://miketurkey.com/
 
-from .manjpfb import main
+from .mman import main_manenfb, main_manjpfb
 if __name__ == '__main__':
-    main()
+    main_manjpfb()
     exit(0)

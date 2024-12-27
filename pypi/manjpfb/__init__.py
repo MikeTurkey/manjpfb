@@ -39,7 +39,6 @@
 #     GPL-3 Licence: https://www.gnu.org/licenses/gpl-3.0.html.en
 #     Mike Turkey.com: https://miketurkey.com/
 
-from .man_common import Mainfunc, _Main_man
-from .manjpfb import Main_manjpfb, main
-__version__ = Main_manjpfb.version
-__versiondate__ = Main_manjpfb.versiondate
+from .mman import Main_manXXYY, _Main_man, main_mman, main_manenfb, main_manjpfb, main_manenob
+__version__ = Main_manXXYY.version
+__versiondate__ = Main_manXXYY.versiondate

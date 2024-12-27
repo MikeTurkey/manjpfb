@@ -1,4 +1,12 @@
 
+ver 0.0.5, 27 Dec 2024
+  Rewrite source code.
+  Add cache function. Man Pager show fastly.
+  Run on windows10(Experimental)
+  Run on macos
+  Run on FreeBSD(Experimental)
+  Run on OpenBSD(Experimental)
+
 ver 0.0.2, 30 Nov 2024
   Bugfix, Unable to run python3 script.
 

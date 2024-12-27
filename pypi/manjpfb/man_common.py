@@ -41,73 +41,148 @@
 
 import os
 import time
+import re
 import sys
 import urllib.request
 import tomllib
+import socket
+import multiprocessing
+import typing
 
 
 class Mainfunc(object):
     @staticmethod
-    def geturlpath_man(rootdic: dict, vernamekey: str) -> tuple:
+    def geturlpath_man(rootdic: dict, vernamekey: str) -> tuple[list, str, str, str, str]:
+        mainfunc = Mainfunc
+        errmes: str
+        rettpl: tuple[list, str, str, str, str]
+        reterr: tuple[list, str, str, str, str] = ([], '', '', '', '')
         if vernamekey == '@LATEST-RELEASE':
-            timelist = list()  # list of tuple [ (release date(epoch), url) ]
-            for vername, d in rootdic.items():
-                if d.get('status') != 'release':
-                    continue  # Not 'release' status.
-                url = d.get('url')
-                osname = d.get('osname')
-                s = d.get('thedate')
-                t = time.strptime(s, '%Y%m%d-%H%M%S')
+            timelist: list = list()
+            for tpl in mainfunc.iter_rootdic(rootdic):
+                vername, osname, status, thedate, urls = tpl
+                t = time.strptime(thedate, '%Y%m%d-%H%M%S')
                 epoch = int(time.mktime(t))
-                timelist.append((epoch, url, osname))
+                timelist.append(
+                    (epoch, urls, osname, status, thedate, vername))
             if len(timelist) == 0:
                 errmes = 'Error: Unable to analyze root.toml.'
                 print(errmes, file=sys.stderr)
                 exit(1)
-            timelist.append((10000, 'example.com', 'Example OS'))
+            timelist.append((10000, ['example.com'], 'Example OS', '', '', ''))
             timelist.sort(key=lambda x: x[0], reverse=True)
-            return (timelist[0][1], timelist[0][2])  # (Latest URL, osname)
-        rootvaluedic: dict = dict()
-        for vername, d in rootdic.items():
+            rettpl = timelist[0][1:]
+            return rettpl
+        matched: bool = False
+        for tpl in mainfunc.iter_rootdic(rootdic):
+            vername, osname, status, thedate, urls = tpl
             if vername == vernamekey:
-                rootvaluedic = d
-                break  # End of loop
-        if len(rootvaluedic) == 0:
-            errmes = 'Error: Not match the OS Version name key. [{0}]'.format(
-                vernamekey)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        url = rootvaluedic.get('url', '')
-        osname = rootvaluedic.get('osname', '')
-        if url == '':
-            errmes = 'Error: Not found url key.  [VERNAME: {0}]'.format(
-                vernamekey)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        if osname == '':
-            errmes = 'Error: Not found osname key.  [VERNAME: {0}]'.format(
-                vernamekey)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        return (url, osname)  # (Matched URL, osname)
+                matched = True
+                break
+        if matched == False:
+            return reterr
+        rettpl = (urls, osname, status, thedate, vernamekey)
+        return rettpl
 
     @staticmethod
-    def loadstring_url(urlpath: str) -> str:
-        try:
-            with urllib.request.urlopen(urlpath) as response:
-                html_content = response.read().decode("utf-8")
-        except urllib.error.URLError as e:
-            errmes = 'Error: URL Error. {0}, URL: {1}'.format(e, urlpath)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        except urllib.error.HTTPError as e:
-            errmes = 'Error: HTTP Error. {0}, URL: {1}'.format(e, urlpath)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        except Exception as e:
-            errmes = 'Error: Runtime Error. {0}, URL: {1}'.format(e, urlpath)
-            print(errmes, file=sys.stderr)
-            exit(1)
+    def iter_rootdic(rootdic: dict):
+        vername: str
+        s: str
+        osname: str
+        status: str
+        thedate: str
+        urls: list = list()
+        errmes: str
+        chklist: list
+        vname: str
+        for vername, d in rootdic.items():
+            if vername in ('baseurls', 'message'):
+                continue
+            if d.get('status') != 'release':
+                continue  # Not 'release' status.
+            if d.get('url') != None:
+                s = d.get('url')
+                if isinstance(s, str) != True:
+                    errmes = 'Error: url value on root.toml is NOT string.'
+                    print(errmes, file=sys.stderr)
+                    exit(1)
+                urls.append(s)
+            osname = d.get('osname')
+            status = d.get('status')
+            thedate = d.get('thedate')
+            if isinstance(d.get('urls'), list):
+                urls.extend(d.get('urls'))
+            chklist = [('osname', osname), ('status', status),
+                       ('thedate', thedate)]
+            for vname, v in chklist:
+                if isinstance(v, str) != True:
+                    errmes = 'Error: {0} on root.toml is NOT string.'.format(
+                        vname)
+                    print(errmes, file=sys.stderr)
+                    exit(1)
+            if isinstance(urls, list) != True:
+                errmes = 'Error: urls on root.toml is NOT list type.'
+                print(errmes, file=sys.stderr)
+                exit(1)
+            yield (vername, osname, status, thedate, urls)
+        return
+
+    @staticmethod
+    def loadbytes_url(urlpath: str, exception: bool = True) -> bytes:
+        html_content: bytes = b''
+        if exception:
+            try:
+                with urllib.request.urlopen(urlpath) as response:
+                    html_content = response.read()
+            except urllib.error.URLError as e:
+                errmes = 'Error: URL Error. {0}, URL: {1}'.format(e, urlpath)
+                print(errmes, file=sys.stderr)
+                exit(1)
+            except urllib.error.HTTPError as e:
+                errmes = 'Error: HTTP Error. {0}, URL: {1}'.format(e, urlpath)
+                print(errmes, file=sys.stderr)
+                exit(1)
+            except Exception as e:
+                errmes = 'Error: Runtime Error. {0}, URL: {1}'.format(
+                    e, urlpath)
+                print(errmes, file=sys.stderr)
+                exit(1)
+            b: bytes = html_content
+            return b
+        else:
+            try:
+                with urllib.request.urlopen(urlpath) as response:
+                    html_content = response.read()
+            except:
+                pass
+            return html_content
+
+    @staticmethod
+    def loadstring_url(urlpath: str, exception: bool = True) -> str:
+        html_content: str = ''
+        if exception:
+            try:
+                with urllib.request.urlopen(urlpath) as response:
+                    html_content = response.read().decode("utf-8")
+            except urllib.error.URLError as e:
+                errmes = 'Error: URL Error. {0}, URL: {1}'.format(e, urlpath)
+                print(errmes, file=sys.stderr)
+                exit(1)
+            except urllib.error.HTTPError as e:
+                errmes = 'Error: HTTP Error. {0}, URL: {1}'.format(e, urlpath)
+                print(errmes, file=sys.stderr)
+                exit(1)
+            except Exception as e:
+                errmes = 'Error: Runtime Error. {0}, URL: {1}'.format(
+                    e, urlpath)
+                print(errmes, file=sys.stderr)
+                exit(1)
+        else:
+            try:
+                with urllib.request.urlopen(urlpath) as response:
+                    html_content = response.read().decode("utf-8")
+            except:
+                pass
         s = html_content
         return s
 
@@ -118,41 +193,51 @@ class Mainfunc(object):
             print(errmes, file=sys.stderr)
             exit(1)
         splitted = url.split('://', 1)
-        tail = os.path.normpath(splitted[1])
+        ptn = r'/+'
+        tail = re.sub(ptn, '/', splitted[1])
         retstr = splitted[0] + '://' + tail
         return retstr
 
 
-class _Main_man(object):
+class Cargo(object):
     @staticmethod
-    def show_listman(roottomlurl: str, vernamekey: str):
-        mainfunc = Mainfunc
-        rootstr = mainfunc.loadstring_url(roottomlurl)
-        rootdic = tomllib.loads(rootstr)
-        t = mainfunc.geturlpath_man(rootdic, vernamekey)
-        tgturl, root_osname = t
-        s = mainfunc.loadstring_url(tgturl)
-        tomldic = tomllib.loads(s)
-
-        def inloop(name: str) -> str:
-            ptns = ('.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9')
-            for ptn in ptns:
-                if name.endswith(ptn):
-                    return name.removesuffix(ptn)
-            return name
-        mannames = [inloop(name) for name, d in tomldic.items()
-                    if isinstance(d, dict) == True]
-        mannames.sort()
-        for name in mannames:
-            print(name)
-        exit(0)
+    def _is_resolvable_hostname_resolver(hostname: str, retqueue):
+        ret: bool = False
+        try:
+            socket.getaddrinfo(hostname, None)
+            ret = True
+        except:
+            pass
+        retqueue.put(ret, timeout=1)
+        return
 
     @staticmethod
-    def show_listos(roottomlurl: str):
-        mainfunc = Mainfunc
-        rootstr = mainfunc.loadstring_url(roottomlurl)
-        rootdic = tomllib.loads(rootstr)
-        osnames = [vv for k, v in rootdic.items()
-                   for kk, vv in v.items() if kk == 'osname']
-        [print(s) for s in osnames]
-        exit(0)
+    def is_resolvable_hostname(url: str, timeout=1) -> bool:
+        subr = Cargo
+        errmes: str = ''
+        s: str = ''
+        ptn: str = r'https\:\/\/[0-9a-zA-Z\.\_\-]+'
+        reobj = re.match(ptn, url)
+        if reobj == None:
+            errmes = 'Error: url is https:// only. [{0}]'.format(url)
+            raise ValueError(errmes)
+        s = reobj.group() if reobj != None else ''  # type: ignore
+        hostname: str = s.removeprefix('https://')
+        retqueue: multiprocessing.queues.Queue = multiprocessing.Queue()
+        func: typing.Callable = subr._is_resolvable_hostname_resolver
+        pobj = multiprocessing.Process(target=func, args=(hostname, retqueue))
+        pobj.start()
+        resolvable: bool = False
+        time_end: int = int(time.time()) + timeout
+        while time_end >= int(time.time()):
+            try:
+                resolvable = retqueue.get_nowait()
+            except:
+                time.sleep(0.1)
+                continue
+            break
+        if pobj.is_alive():
+            pobj.terminate()
+            time.sleep(0.1)
+        pobj.close()
+        return resolvable

@@ -19,17 +19,16 @@
 manjpfb
 =================================
 
-|  manjpfb created by MikeTurkey
-|  Version 0.0.2, 30 Nov 2024
-|  2024, COPYRIGHT MikeTurkey, All Right Reserved.
-|  ABSOLUTELY NO WARRANTY.
-|  GPLv3 License including a prohibition clause for AI training.
-|  Release status: Experimental
+  |  manjpfb created by MikeTurkey
+  |  Version 0.0.5, 27 Dec 2024
+  |  2024, COPYRIGHT MikeTurkey, All Right Reserved.
+  |  ABSOLUTELY NO WARRANTY.
+  |  GPLv3 License including a prohibition clause for AI training.
 
 要約
 ---------------------------------
 
-FreeBSD 日本語マニュアルページャー
+  FreeBSD 日本語マニュアルページャー
 
 
 概要
@@ -42,19 +41,19 @@ FreeBSD 日本語マニュアルページャー
   FreeBSD日本語マニュアルの中には完全に翻訳されていないものがありますが、現在のところ仕様です。
   ドキュメントの翻訳に全ての責任を負わないことに注意してください。
 
-Summary
+SUMMARY
 ---------------------------------
 
-FreeBSD Japanese-Man Pager.
+  FreeBSD Japanese-Man Pager.
 
-Synopsis
+SYNOPSIS
 --------------------------------
 
-| manjpfb [ --version | --help ]
-| manjpfb [ --listos | --listman]
-| manjpfb [MANNUM] [MANNAME]
+  | manjpfb [ \--version | \--help ]
+  | manjpfb [ \--listos | \--listman]
+  | manjpfb [MANNUM] [MANNAME]
 
-Quick Start
+QUICK START
 --------------------------------
 
 Run on python pypi.
@@ -62,10 +61,10 @@ Run on python pypi.
 .. code-block:: console
 
   $ python3.xx -m pip install manjpfb
-  $ manjpfb man 
+  $ python3.xx -m manjpfb man 
 
 
-Description
+DESCRIPTION
 --------------------------------
 
   manjpfb is pager of FreeBSD Japanese man using Python3.
@@ -75,7 +74,74 @@ Description
   There is man-data that is not fully translated, but this is currently by design.
   Please note that I do not take full responsibility for the translation of the documents.
 
-Example
+OPTIONS
+-------------------------------
+
+| \--version
+
+  |   Show version.
+
+| \--help
+
+  |   Show help messages.
+  
+| \--listos
+
+  |   Show the FreeBSD version name list of the manual.
+  |   e.g. FreeBSD 13.2-Release
+
+| \--listman
+
+  |   Show the man list of the FreeBSD.
+  |   e.g. ls, cp, rm, mv ... 
+
+| \--listman1
+
+  |   Show the man 1 list of the FreeBSD.
+  |   man 1: General Commands Manual
+
+| \--listman2
+
+  |   Show the man 2 list of the FreeBSD.
+  |   man 2: System Calls Manual
+
+| \--listman3
+
+  |   Show the man 3 list of the FreeBSD.
+  |   man 3: Library Functions Manual
+
+| \--listman4
+
+  |   Show the man 4 list of the FreeBSD.
+  |   man 4: Kernel Interfaces Manual
+
+| \--listman5
+
+  |   Show the man 5 list of the FreeBSD.
+  |   man 5: File Formats Manual
+
+| \--listman6
+
+  |   Show the man 6 list of the FreeBSD.
+  |   man 6: Games Manual
+
+| \--listman7
+
+  |   Show the man 7 list of the FreeBSD.
+  |   man 7: Miscellaneous Information Manual
+
+| \--listman8
+
+  |   Show the man 8 list of the FreeBSD.
+  |   man 8: System Manager's Manual
+
+| \--listman9
+
+  |   Show the man 9 list of the FreeBSD.
+  |   man 9: Kernel Developer's Manual
+
+
+EXAMPLE
 --------------------------------
 
 .. code-block:: console
@@ -91,4 +157,20 @@ Example
   $ manjpfb --listos
       Show os name list of man.
 
+
+BUGS
+------
+
+  | Please report bugs to the issue tracker: https://github.com/MikeTurkey/mman/issues
+  | or by e-mail: <voice[ATmark]miketurkey.com>
+   
+AUTHOR
+------
+
+  MikeTurkey <voice[ATmark]miketurkey.com>
+
+LICENSE
+----------
+
+  GPLv3 License including a prohibition clause for AI training.
 
