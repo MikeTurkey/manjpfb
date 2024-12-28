@@ -56,379 +56,12 @@ import pathlib
 import tempfile
 import multiprocessing
 if __name__ == '__main__':
-    from man_common import Mainfunc
+    from man_mother_mary import Mainfunc, Man_cache, Man_pagercache
 else:
     try:
-        from .man_common import Mainfunc
+        from .man_mother_mary import Mainfunc, Man_cache, Man_pagercache
     except:
-        from man_common import Mainfunc
-
-
-class Man_cache(object):
-    _suffix_cmdnames: typing.Final[dict] = \
-        {('fb', 'eng', 'arm64'): 'enfb', ('fb', 'jpn', 'arm64'): 'jpfb',
-         ('ob', 'eng', 'arm64'): 'enob'}
-
-    def __init__(self):
-        self._og_os2: str = ''
-        self._og_lang: str = ''
-        self._og_arch: str = ''
-        self._hashdg_roottoml: str = ''
-        self._hashdg_mantoml: str = ''
-        self._platform: str = sys.platform
-        self._suffix_cmdname: str = ''
-        self._tmpdir: pathlib.Path = pathlib.Path('')
-        return
-
-    @property
-    def og_os2(self):
-        return self._og_os2
-
-    @property
-    def og_lang(self):
-        return self._og_lang
-
-    @property
-    def og_arch(self):
-        return self._og_arch
-
-    @property
-    def hashdg_roottoml(self):
-        return self._hashdg_roottoml
-
-    @property
-    def hashdg_mantoml(self):
-        return self._hashdg_mantoml
-
-    @property
-    def platform(self):
-        return self._platform
-
-    @property
-    def suffix_cmdname(self):
-        return self._suffix_cmdname
-
-    @property
-    def tmpdir(self):
-        return self._tmpdir
-
-    def _makefpath_tmpdir(self) -> tuple[pathlib.Path, pathlib.Path, pathlib.Path | None]:
-        systemtmpdir: typing.Final[str] = tempfile.gettempdir()
-        date: typing.Final[str] = time.strftime('%Y%m%d', time.localtime())
-        tuplekey: typing.Final[tuple] = (
-            self.og_os2, self.og_lang, self.og_arch)
-        suffix_cmdname: typing.Final[str] = self._suffix_cmdnames.get(
-            tuplekey, '')
-        tmpdir: pathlib.Path
-        tmpdir1st: pathlib.Path
-        tmpdir2nd: pathlib.Path | None
-        s: str = ''
-        if self.platform != 'win32':
-            uid: typing.Final[str] = str(os.getuid())
-            if suffix_cmdname == '':
-                errmes = 'Error: Unknown _suffix_cmdnames key. [{0}]'.format(
-                    tuplekey)
-                print(errmes, file=sys.stderr)
-                exit(1)
-            s = '/mman_{0}/{1}/man{2}'.format(date, uid, suffix_cmdname)
-            tmpdir = pathlib.Path(os.path.abspath(systemtmpdir + s))
-            s = '/mman_{0}'.format(date)
-            tmpdir1st = pathlib.Path(os.path.abspath(systemtmpdir + s))
-            s = '/mman_{0}/{1}/'.format(date, uid)
-            tmpdir2nd = pathlib.Path(os.path.abspath(systemtmpdir + s))
-        elif self.platform == 'win32':
-            if suffix_cmdname == '':
-                errmes = 'Error: Unknown _suffix_cmdnames key. [{0}]'.format(
-                    tuplekey)
-                print(errmes, file=sys.stderr)
-                exit(1)
-            s = '\\mman_{0}\\man{1}'.format(date, suffix_cmdname)
-            tmpdir = pathlib.Path(os.path.abspath(systemtmpdir + s))
-            s = '\\mman_{0}'.format(date)
-            tmpdir1st = pathlib.Path(os.path.abspath(systemtmpdir + s))
-            tmpdir2nd = None
-        return (tmpdir, tmpdir1st, tmpdir2nd)
-
-    def init(self, os2: str, lang: str, arch: str):
-        errmes: str = ''
-        t: tuple = (os2, lang, arch)
-        s: str = self._suffix_cmdnames.get(t, '')
-        if s == '':
-            errmes = 'Error: Not _suffix_cmdnames dict key. [{0}]'.format(t)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        self._suffix_cmdname = s
-        self._og_os2 = os2
-        self._og_lang = lang
-        self._og_arch = arch
-        t = self._makefpath_tmpdir()
-        self._tmpdir = t[0]
-        return
-
-    def mktempdir_ifnot(self):
-        errmes: str = ''
-        t: tuple = self._makefpath_tmpdir()
-        tmpdir: typing.Final[pathlib.Path] = t[0]
-        tmpdir1st: typing.Final[pathlib.Path] = t[1]
-        tmpdir2nd: typing.Final = t[2]
-        pathlib.Path(tmpdir1st).mkdir(exist_ok=True)
-        if tmpdir2nd != None:
-            pathlib.Path(tmpdir2nd).mkdir(exist_ok=True)
-        pathlib.Path(tmpdir).mkdir(exist_ok=True)
-        if self.platform != 'win32':
-            newstmode: int = 0
-            dpath: str = ''
-            dpath = str(tmpdir1st)
-            newstmode = os.stat(dpath).st_mode | 0o1000
-            os.chmod(dpath, newstmode)
-            dpath = str(tmpdir2nd)
-            newstmode = os.stat(dpath).st_mode | 0o1000
-            os.chmod(dpath, newstmode)
-            dpath = str(tmpdir)
-            newstmode = os.stat(dpath).st_mode | 0o1000
-            os.chmod(dpath, newstmode)
-        self._tmpdir = tmpdir
-        self._tmpdir1st = tmpdir1st
-        self._tmpdir2nd = pathlib.Path(
-            '') if self.platform == 'win32' else tmpdir2nd
-        return
-
-    def remove_oldcache(self):
-        s: str = ''
-        errmes: str = ''
-        systemtmpdir: typing.Final[pathlib.Path] = pathlib.Path(
-            tempfile.gettempdir())
-        date: typing.Final[str] = time.strftime('%Y%m%d', time.localtime())
-        s = 'mman_{0}'.format(date)
-        nowtmpdir: typing.Final[pathlib.Path] = systemtmpdir / s
-        ptn: str = r'mman\_2[0-9]{3}[01][0-9][0-3][0-9]'
-        recpl = re.compile(ptn)
-        for f in pathlib.Path(systemtmpdir).glob('*'):
-            if f.is_dir() != True:
-                continue
-            if f == nowtmpdir:
-                continue
-            s = str(f.relative_to(systemtmpdir))
-            if recpl.match(s) == None:
-                continue
-            shutil.rmtree(f)
-        return
-
-    def store_roottoml(self, hit: bool, gzbys: bytes):
-        if hit:
-            return
-        errmes: str = ''
-        chklist: list = [(hit, 'hit', bool), (gzbys, 'gzbys', bytes)]
-        for v, vname, vtype in chklist:
-            if isinstance(v, vtype) != True:
-                errmes = 'Error: {0} is NOT {1} type'.format(
-                    vname, repr(vtype))
-                raise TypeError(errmes)
-        fpath: pathlib.PosixPath | pathlib.WindowsPath
-        fpath = self.tmpdir / 'root.toml.gz'
-        with open(str(fpath), 'wb') as fp:
-            fp.write(gzbys)
-        return
-
-    def get_roottoml(self, hashdg: str) -> tuple[bool, str]:
-        ptn: str = r'[0-9a-f]{64}'
-        errmes: str = ''
-        if re.fullmatch(ptn, hashdg) == None:
-            errmes = 'Error: Not hashdg string. [{0}]'.format(hashdg)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        if self.tmpdir.is_dir() != True:
-            errmes = 'Error: Not found cache directory. [{0}]'.format(
-                self.tmpdir)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        fpath: pathlib.PosixPath | pathlib.WindowsPath
-        fpath = self.tmpdir / 'root.toml.gz'
-        if fpath.is_file() != True:
-            return False, ''
-        hobj: typing.Final = hashlib.new('SHA3-256')
-        try:
-            with open(fpath, 'rb') as fp:
-                gzbys: typing.Final[bytes] = fp.read()
-        except:
-            errmes = 'Error: root.toml.gz cache file open error. [{0}]'.format(
-                fpath)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        hobj.update(gzbys)
-        hashdg_body: str = hobj.hexdigest()
-        if hashdg_body != hashdg:
-            return False, ''
-        rootbys: bytes = gzip.decompress(gzbys)
-        rootstr: str = rootbys.decode('UTF-8')
-        return True, rootstr
-
-    def store_mantoml(self, hit: bool, url: str, gzbys: bytes):
-        if hit:
-            return
-        errmes: str = ''
-        chklist: list = [(hit, 'hit', bool), (url, 'url',
-                                              str), (gzbys, 'gzbys', bytes)]
-        for v, vname, vtype in chklist:
-            if isinstance(v, vtype) != True:
-                errmes = 'Error: {0} is NOT {1} type'.format(
-                    vname, repr(vtype))
-                raise TypeError(errmes)
-        splitted: list = url.rsplit('/', 1)
-        if len(splitted) != 2:
-            errmes = 'Error: Not url format. [{0}]'.format(url)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        fname: str = splitted[1]
-        ptn: str = r'man.+(?:amd64|arm64)_hash_2[0-9]{3}[0-1][0-9][0-3][0-9]\.toml\.gz$'
-        if re.match(ptn, fname) == None:
-            errmes = 'Error: Not man.toml.gz format. [{0}]'.format(fname)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        fpath: pathlib.PosixPath | pathlib.WindowsPath
-        fpath = self.tmpdir / fname
-        with open(str(fpath), 'wb') as fp:
-            fp.write(gzbys)
-        return
-
-    def get_mantoml(self, url: str, hashdg: str) -> tuple[bool, str]:
-        ptn: str = r'[0-9a-f]{64}'
-        errmes: str = ''
-        if re.fullmatch(ptn, hashdg) == None:
-            errmes = 'Error: Not hashdg string. [{0}]'.format(hashdg)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        if self.tmpdir.is_dir() != True:
-            errmes = 'Error: Not found cache directory. [{0}]'.format(
-                self.tmpdir)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        splitted: list = url.rsplit('/', 1)
-        if len(splitted) != 2:
-            errmes = 'Error: Not url format. [{0}]'.format(url)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        fname: str = splitted[1]
-        ptn = r'man.+(?:amd64|arm64)_hash_2[0-9]{3}[0-1][0-9][0-3][0-9]\.toml\.gz$'
-        if re.match(ptn, fname) == None:
-            errmes = 'Error: Not man.toml.gz format. [{0}]'.format(fname)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        fpath: pathlib.PosixPath | pathlib.WindowsPath
-        fpath = self.tmpdir / fname
-        if fpath.is_file() != True:
-            return False, ''
-        hobj: typing.Final = hashlib.new('SHA3-256')
-        try:
-            with open(fpath, 'rb') as fp:
-                gzbys: typing.Final[bytes] = fp.read()
-        except:
-            errmes = 'Error: man.toml.gz cache file open error. [{0}]'.format(
-                fpath)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        hobj.update(gzbys)
-        hashdg_body: str = hobj.hexdigest()
-        if hashdg_body != hashdg:
-            return False, ''
-        mantomlbys: bytes = gzip.decompress(gzbys)
-        mantomlstr: str = mantomlbys.decode('UTF-8')
-        return True, mantomlstr
-
-
-class Man_pagercache(object):
-    def __init__(self):
-        self._tmpdir: pathlib.Path = pathlib.Path('.')
-        return
-
-    @property
-    def tmpdir(self):
-        return self._tmpdir
-
-    def init(self, tmpdir: pathlib.Path):
-        errmes = ''
-        if isinstance(tmpdir, pathlib.PosixPath) != True and isinstance(tmpdir, pathlib.WindowsPath) != True:
-            errmes = 'Error: tmpdir is NOT PosixPath or WindowsPath object.'
-            raise TypeError(errmes)
-        self._tmpdir = tmpdir
-        return
-
-    def get_pager(self, url: str) -> tuple[bool, str]:
-        errmes: str = ''
-        if isinstance(url, str) != True:
-            errmes = 'Error: url is not string type.'
-            print(errmes, file=sys.stderr)
-            exit(1)
-        if self.tmpdir.is_dir() != True:
-            errmes = 'Error: Not found cache directory. [{0}]'.format(
-                self.tmpdir)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        splitted: list = url.rsplit('/', 2)
-        if len(splitted) != 3:
-            errmes = 'Error: Not url format. [{0}]'.format(url)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        fname: str = splitted[2]
-        hashdg: str = splitted[1]
-        ptn: str = r'[0-9a-f]{64}$'
-        if re.match(ptn, hashdg) == None:
-            errmes = 'Error: Not hash digest format. [{0}]'.format(hashdg)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        ptn = r'[0-9a-f]{6}\.[1-9a-z]\.gz$'
-        if re.match(ptn, fname) == None:
-            errmes = 'Error: Not pager file format. [{0}]'.format(fname)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        fpath: pathlib.PosixPath | pathlib.WindowsPath
-        fpath = self.tmpdir / fname
-        if fpath.is_file() != True:
-            return False, ''
-        hobj: typing.Final = hashlib.new('SHA3-256')
-        try:
-            with open(fpath, 'rb') as fp:
-                gzbys: typing.Final[bytes] = fp.read()
-        except:
-            errmes = 'Error: man.toml.gz cache file open error. [{0}]'.format(
-                fpath)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        hobj.update(gzbys)
-        hashdg_body: str = hobj.hexdigest()
-        if hashdg_body != hashdg:
-            return False, ''
-        mantomlbys: bytes = gzip.decompress(gzbys)
-        mantomlstr: str = mantomlbys.decode('UTF-8')
-        return True, mantomlstr
-
-    def store_pager(self, hit: bool, pagerurl: str, gzbys: bytes):
-        if hit:
-            return
-        errmes: str = ''
-        chklist: list = [(hit, 'hit', bool), (pagerurl,
-                                              'pagerurl', str), (gzbys, 'gzbys', bytes)]
-        for v, vname, vtype in chklist:
-            if isinstance(v, vtype) != True:
-                errmes = 'Error: {0} is NOT {1} type'.format(
-                    vname, repr(vtype))
-                raise TypeError(errmes)
-        splitted: list = pagerurl.rsplit('/', 1)
-        if len(splitted) != 2:
-            errmes = 'Error: Not pagerurl format. [{0}]'.format(pagerurl)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        fname: str = splitted[1]
-        ptn: str = r'[0-9a-f]{6}\.[1-9a-z]\.gz$'
-        if re.match(ptn, fname) == None:
-            errmes = 'Error: Not pager format. [{0}]'.format(fname)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        fpath: pathlib.PosixPath | pathlib.WindowsPath
-        fpath = self.tmpdir / fname
-        with open(str(fpath), 'wb') as fp:
-            fp.write(gzbys)
-        return
+        from man_mother_mary import Mainfunc, Man_cache, Man_pagercache
 
 
 class Man_roottoml_subroutine(object):
@@ -1128,8 +761,8 @@ class _Main_man(object):
 
 
 class Main_manXXYY(object):
-    version:     str = '0.0.6'
-    versiondate: str = '27 Dec 2024'
+    version:     str = '0.0.7'
+    versiondate: str = '28 Dec 2024'
 
     def __init__(self):
         self._manenv_os2: str = ''
@@ -1301,9 +934,11 @@ class Main_manXXYY(object):
         exit(1)
 
     @staticmethod
-    def change_pager():
+    def change_pager(lang: str):
         mainfunc = Mainfunc
         linuxid: str = ''
+        if lang == 'eng':
+            return
         if sys.platform == 'linux':
             linuxid = mainfunc.getid_linux()
         if linuxid == 'alpine':
@@ -1445,7 +1080,7 @@ class Main_manXXYY(object):
         elif sys.platform == 'win32':
             s = unicodedata.normalize('NFC', s)
         s = _main_man.norm_punctuation(s)
-        self.change_pager()
+        self.change_pager(lang)
         pydoc.pager(s)
         print('OSNAME(man):', mantomlobj.osname)
         print(roottomlobj.message)

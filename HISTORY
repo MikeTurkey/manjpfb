@@ -1,4 +1,8 @@
 
+ver 0.0.7, 28 Dec 2024
+  Rename python file name.
+  Move some class to man_mother_mary.py 
+
 ver 0.0.6, 27 Dec 2024
   Add pager selector.
   Bugfix, Invalid temporary directory.
