@@ -56,12 +56,12 @@ import pathlib
 import tempfile
 import multiprocessing
 if __name__ == '__main__':
-    from man_mother_mary import Mainfunc, Man_cache, Man_pagercache
+    from man_mother_mary import MmanStdError, Mainfunc, Mmanfunc, Man_cache, Man_pagercache
 else:
     try:
-        from .man_mother_mary import Mainfunc, Man_cache, Man_pagercache
+        from .man_mother_mary import MmanStdError, Mainfunc, Mmanfunc, Man_cache, Man_pagercache
     except:
-        from man_mother_mary import Mainfunc, Man_cache, Man_pagercache
+        from man_mother_mary import MmanStdError, Mainfunc, Mmanfunc, Man_cache, Man_pagercache
 
 
 class Man_roottoml_subroutine(object):
@@ -208,13 +208,11 @@ class Man_roottoml(object):
         if root_dir_suffix == '':
             errmes = 'Error: Not found __root_dir_suffixes key. [{0}]'.format(
                 t)
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         webdbnum: str = self.__webdbnums.get(t, '')
         if webdbnum == '':
             errmes = 'Error: Not found __webdbnums key. [{0}]'.format(t)
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         root_sites = [''.join([chr(i) for i in t]) for t in self.__root_sites]
         def func(x): return x + self.__root_dir.format(root_dir_suffix,
                                                        webdbnum) + self.__root_name
@@ -232,8 +230,7 @@ class Man_roottoml(object):
         for url in roottomlurls:
             if url.endswith('toml.gz') != True:
                 errmes = 'Error: Not root.toml.gz file. [{0}]'.format(url)
-                print(errmes, file=sys.stderr)
-                exit(1)
+                raise MmanStdError(errmes)
         roottomlsha3urls: list = [url + '.SHA3-256' for url in roottomlurls]
         retqueue: multiprocessing.queues.Queue = multiprocessing.Queue()
         func: typing.Callable = subr._load_roottomlurls_childprocess
@@ -255,17 +252,20 @@ class Man_roottoml(object):
                 time.sleep(0.1)
                 continue
             break
+
+        def finish_child(pobjlist):
+            for pobj in pobjlist:
+                if pobj.is_alive():
+                    pobj.terminate()
+                    while pobj.is_alive():
+                        time.sleep(0.1)
+            return
         if hashdg_url == '':
-            errmes = 'Error: Can not download root.toml.gz.SHA3-256'
-            for url in roottomlsha3urls:
-                print(url, file=sys.stderr)
-                print(errmes, file=sys.stderr)
-                exit(1)
-        for pobj in pobjlist:
-            if pobj.is_alive():
-                pobj.terminate()
-                while pobj.is_alive():
-                    time.sleep(0.1)
+            errmes = '\n'.join([url for url in roottomlsha3urls])
+            errmes += '\nError: Can not download root.toml.gz.SHA3-256'
+            finish_child(pobjlist)
+            raise MmanStdError(errmes)
+        finish_child(pobjlist)
         roottomlurls = subr.sort_urllist(roottomlurls, roottomlurl_sha3)
         hit: bool
         rootstr: str
@@ -277,11 +277,9 @@ class Man_roottoml(object):
                 if gzbys != b'':
                     break
             if gzbys == b'':
-                errmes = 'Error: Can not download root.toml.gz'
-                for url in roottomlurls:
-                    print(url, file=sys.stderr)
-                print(errmes, file=sys.stderr)
-                exit(1)
+                errmes = '\n'.join([url for url in roottomlurls])
+                errmes += '\nError: Can not download root.toml.gz'
+                raise MmanStdError(errmes)
             hobj = hashlib.new('SHA3-256')
             hobj.update(gzbys)
             hashdg_body: str = hobj.hexdigest()
@@ -337,13 +335,11 @@ class Man_roottoml(object):
         debug: bool = False
         if len(mantomlurls) < 1:
             errmes = 'Error: mantomlurls length is zero.'
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         for url in mantomlurls:
             if url.endswith('.toml.gz') != True:
                 errmes = 'Error: url is invalid extension. [{0}]'.format(url)
-                print(errmes, file=sys.stderr)
-                exit(1)
+                raise MmanStdError(errmes)
         mantomlsha3urls: list = [url + '.SHA3-256' for url in mantomlurls]
         hashdg_url: str = ''
         for url in mantomlsha3urls:
@@ -352,8 +348,7 @@ class Man_roottoml(object):
                 break
         if hashdg_url == '':
             errmes = 'Error: Can not load the url.[{0}]'.format(url)
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         gzbys: bytes = b''
         mantomlbys: bytes = b''
         mantomlstr: str = ''
@@ -367,8 +362,7 @@ class Man_roottoml(object):
                     break
             if gzbys == b'':
                 errmes = 'Error: Can not load the url.[{0}]'.format(url)
-                print(errmes, file=sys.stderr)
-                exit(1)
+                raise MmanStdError(errmes)
             mantomlbys = gzip.decompress(gzbys)
             mantomlstr = mantomlbys.decode('UTF-8')
         if debug:
@@ -419,8 +413,7 @@ class Man_roottoml(object):
         self._baseurls = rootdic.get('baseurls', [])
         if len(self.baseurls) == 0:
             errmes = 'Error: Empty baseurls values in root.toml'
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         self._message = rootdic.get('message', '')
         if self._roottomlurl != '':
             self._baseurls = self._sort_baseurls(
@@ -475,8 +468,7 @@ class Man_mantoml(object):
             if vname == 'OSNAME':
                 return
         errmes: str = 'Error: RuntimeError, Invalid tomldic.'
-        print(errmes, file=sys.stderr)
-        exit(1)
+        raise MmanStdError(errmes)
 
     def vcheck_og_osname_root(self):
         ptns: typing.Final[tuple] = ('FreeBSD', 'OpenBSD')
@@ -485,8 +477,7 @@ class Man_mantoml(object):
             if self.og_osname_root.startswith(ptn):
                 return
         errmes: str = 'Error: Invalid OSNAME on man metadata.'
-        print(errmes, file=sys.stderr)
-        exit(1)
+        raise MmanStdError(errmes)
 
     def vcheck_og_mannum(self):
         ptns: typing.Final[tuple] = ('', '1', '2', '3', '4',
@@ -497,8 +488,7 @@ class Man_mantoml(object):
                 return
         errmes: str = 'Error: Invalid Man section number(1-9). [{0}]'.format(
             self.og_mannum)
-        print(errmes, file=sys.stderr)
-        exit(1)
+        raise MmanStdError(errmes)
 
     def vcheck_og_manname(self):
         ptn: typing.Final[str] = r'^[A-Za-z0-9\_\-\[]+'
@@ -506,8 +496,7 @@ class Man_mantoml(object):
         if reobj == None:
             errmes: str = 'Error: Invalid man name string. [{0}]'.format(
                 self.og_manname)
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         return
 
     def vcheck_og_baseurls(self):
@@ -526,13 +515,11 @@ class Man_mantoml(object):
             if url.startswith('https://') != True:
                 errmes = 'Error: baseurl protocol is NOT "https://". [{0}]'.format(
                     url)
-                print(errmes, file=sys.stderr)
-                exit(1)
+                raise MmanStdError(errmes)
             if ('miketurkey.com' not in url) and ('cloudfront.net' not in url):
                 errmes = 'Error: baseurl is NOT "miketurkey.com". [{0}]'.format(
                     url)
-                print(errmes, file=sys.stderr)
-                exit(1)
+                raise MmanStdError(errmes)
         return
 
     def vcheck_og_fnamemode(self):
@@ -542,8 +529,7 @@ class Man_mantoml(object):
             raise TypeError(errmes)
         if self.og_fnamemode not in ('raw', 'hash'):
             errmes = 'Error: og_fnamemode is NOT raw and hash.'
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         return
 
     @staticmethod
@@ -553,13 +539,11 @@ class Man_mantoml(object):
         ptn_fname:  typing.Final[str] = r'.+\.[1-9]'
         if re.fullmatch(ptn_fname, fname) == None:
             errmes = 'Error: Invalid fname. [{0}]'.format(fname)
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         if re.fullmatch(ptn_hashdg, hashdg) == None:
             errmes = 'Error: Runtime Error, Invalid hashdg pattern. [{0}]'.format(
                 hashdg)
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         if fnamemode == 'raw':
             return fname
         templist: list
@@ -570,8 +554,7 @@ class Man_mantoml(object):
             return retstr
         errmes = 'Error: Runtime Error, Invalid fnamemode. [{0}]'.format(
             fnamemode)
-        print(errmes, file=sys.stderr)
-        exit(1)
+        raise MmanStdError(errmes)
 
     def print_attributes(self):
         for k, v in self.__dict__.items():
@@ -609,8 +592,7 @@ class Man_mantoml(object):
         if self.og_osname_root != self.osname:
             errmes = 'Error: Mismatch OSNAME. [{0}, {1}]'.format(
                 self.og_osname_root, self.osname)
-            print(errmes)
-            exit(1)
+            raise MmanStdError(errmes)
         fnameurldictkeys: list
         if self.og_mannum != '':
             fnameurldictkeys = [self.og_manname + '.' + self.og_mannum]
@@ -661,7 +643,18 @@ class _Main_man(object):
         return re.sub(ptn, '-', pagerstr)
 
     @staticmethod
-    def show_listman_n(secnum: int, vernamekey: str, os2: str, lang: str, arch: str):
+    def show_license(os2: str, lang: str, arch: str, mman: bool = False):
+        mmanfunc = Mmanfunc
+        license: str = ''
+        if mman:
+            license = mmanfunc.createstr_license(os2, lang, arch, mkall=True)
+        else:
+            license = mmanfunc.createstr_license(os2, lang, arch)
+        print(license)
+        exit(0)
+
+    @staticmethod
+    def show_listman_n(secnum: int, vernamekey: str, os2: str, lang: str, arch: str, gui: bool) -> str | None:
         roottomlobj = Man_roottoml()
         roottomlobj.og_vernamekey = '@LATEST-RELEASE'
         roottomlobj.og_manhashfpath = ''
@@ -681,12 +674,15 @@ class _Main_man(object):
                     d in tomldic.items() if isinstance(d, dict) == True]
         mannames = [name for name in mannames if name != '']
         mannames.sort()
+        if gui:
+            tmplist: list = [name for name in mannames]
+            return '\n'.join(tmplist)
         for name in mannames:
             print(name)
         exit(0)
 
     @staticmethod
-    def show_listman(vernamekey: str, os2: str, lang: str, arch: str):
+    def show_listman(vernamekey: str, os2: str, lang: str, arch: str, gui: bool) -> str | None:
         roottomlobj = Man_roottoml()
         roottomlobj.og_vernamekey = '@LATEST-RELEASE'
         roottomlobj.og_manhashfpath = ''
@@ -705,6 +701,9 @@ class _Main_man(object):
         mannames = [inloop(name) for name, d in tomldic.items()
                     if isinstance(d, dict) == True]
         mannames.sort()
+        if gui:
+            tmplist: list = [name for name in mannames]
+            return '\n'.join(tmplist)
         for name in mannames:
             print(name)
         exit(0)
@@ -761,26 +760,31 @@ class _Main_man(object):
 
 
 class Main_manXXYY(object):
-    version:     str = '0.0.7'
-    versiondate: str = '28 Dec 2024'
+    version:     str = '0.0.8'
+    versiondate: str = '1 Jan 2024'
 
     def __init__(self):
         self._manenv_os2: str = ''
         self._manenv_lang: str = ''
         self._manenv_arch: str = ''
+        self._cmdname: str = ''
         return
 
     @property
-    def manenv_os2(self):
+    def manenv_os2(self) -> str:
         return self._manenv_os2
 
     @property
-    def manenv_lang(self):
+    def manenv_lang(self) -> str:
         return self._manenv_lang
 
     @property
-    def manenv_arch(self):
+    def manenv_arch(self) -> str:
         return self._manenv_arch
+
+    @property
+    def cmdname(self) -> str:
+        return self._cmdname
 
     @staticmethod
     def show_helpmes(os2: str, lang: str):
@@ -884,25 +888,24 @@ class Main_manXXYY(object):
         exit(0)
 
     def set_manenv(self, os2: str, lang: str, arch: str):
+        mmanfunc = Mmanfunc
         os2_ptn:  typing.Final[tuple] = ('fb', 'ob')
         lang_ptn: typing.Final[tuple] = ('eng', 'jpn')
         arch_ptn: typing.Final[tuple] = ('arm64',)
         errmes: str = ''
         if os2 not in os2_ptn:
             errmes = 'Error: Invalid os2 type. [{0}]'.format(os2)
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         if lang not in lang_ptn:
             errmes = 'Error: Invalid lang type. [{0}]'.format(lang)
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         if arch not in arch_ptn:
             errmes = 'Error: Invalid arch type. [{0}]'.format(arch)
-            print(errmes, file=sys.stderr)
-            exit(1)
+            raise MmanStdError(errmes)
         self._manenv_os2 = os2
         self._manenv_lang = lang
         self._manenv_arch = arch
+        self._cmdname = mmanfunc.createstr_cmdname(os2, lang, arch)
         return
 
     def check_terminal(self, lang: str):
@@ -946,19 +949,127 @@ class Main_manXXYY(object):
             return
         return
 
-    def main(self, os2: str = '', lang: str = '', arch: str = ''):
-        mainfunc = Mainfunc
-        _main_man = _Main_man
-        cache = Man_cache()
-        cache.init(os2, lang, arch)
-        cache.mktempdir_ifnot()
+    @staticmethod
+    def make_initopt():
         opt = types.SimpleNamespace(manhashfpath='', mannum='', manname='',
                                     listos=False, listman=False, release='',
                                     listman1=False, listman2=False, listman3=False,
                                     listman4=False, listman5=False, listman6=False,
                                     listman7=False, listman8=False, listman9=False,
-                                    showtmpdir=False)
+                                    showtmpdir=False, license=False)
+        return opt
+
+    def main(self, os2: str = '', lang: str = '', arch: str = '',
+             gui: bool = False, manname: str = '', mannum: str = '', listman: str = '') -> str:
+        mainfunc = Mainfunc
+        _main_man = _Main_man
         self.set_manenv(os2, lang, arch)
+        cache = Man_cache()
+        cache.init(os2, lang, arch)
+        cache.mktempdir_ifnot()
+        if not gui:
+            arg1, arg2, opt = self.create_mainargs()
+            vernamekey = opt.release if opt.release != '' else '@LATEST-RELEASE'
+            if opt.listos:
+                _main_man.show_listos(
+                    self.manenv_os2, self.manenv_lang, self.manenv_arch)
+                exit(0)
+            if opt.listman:
+                _main_man.show_listman(vernamekey, self.manenv_os2, self.manenv_lang,
+                                       self.manenv_arch, False)
+            chklist: list = [False, opt.listman1, opt.listman2, opt.listman3, opt.listman4,
+                             opt.listman5, opt.listman6, opt.listman7, opt.listman8, opt.listman9]
+            if any(chklist):
+                n: int = chklist.index(True)
+                if 1 <= n <= 9:
+                    _main_man.show_listman_n(n, vernamekey, self.manenv_os2, self.manenv_lang,
+                                             self.manenv_arch, False)
+                errmes = 'Error: Runtime Error. Invalid --listman[N]'
+                raise MmanStdError(errmes)
+            if opt.license:
+                _main_man.show_license(os2, lang, arch)
+            self.check_terminal(lang)
+            if arg2 == '':
+                opt.manname = arg1
+            else:
+                opt.mannum = arg1
+                opt.manname = arg2
+        if gui:
+            opt = self.make_initopt()
+            opt.manname = manname  # e.g. args: ls
+            opt.mannum = mannum
+            vernamekey = opt.release if opt.release != '' else '@LATEST-RELEASE'
+        s: str = ''
+        if gui == True and listman == 'all':
+            s = _main_man.show_listman(vernamekey, self.manenv_os2, self.manenv_lang,
+                                       self.manenv_arch, gui)
+            return s
+        chktpl: tuple = ('1', '2', '3', '4', '5', '6', '7', '8', '9')
+        if gui == True and (listman in chktpl):
+            n = int(listman)
+            s = _main_man.show_listman_n(n, vernamekey, self.manenv_os2, self.manenv_lang,
+                                         self.manenv_arch, gui)
+            return s
+        roottomlobj = Man_roottoml()
+        roottomlobj.og_vernamekey = vernamekey
+        roottomlobj.og_manhashfpath = opt.manhashfpath
+        roottomlobj.og_roottomlfpath = ''
+        roottomlobj.og_manenv_os2 = self.manenv_os2
+        roottomlobj.og_manenv_lang = self.manenv_lang
+        roottomlobj.og_manenv_arch = self.manenv_arch
+        tomldic = roottomlobj.make()
+        mantomlobj = Man_mantoml()
+        mantomlobj.og_tomldic = tomldic.copy()
+        mantomlobj.og_osname_root = roottomlobj.osname
+        mantomlobj.og_mannum = opt.mannum
+        mantomlobj.og_manname = opt.manname
+        mantomlobj.og_baseurls = roottomlobj.baseurls
+        mantomlobj.og_fnamemode = 'hash'
+        urlhashlist: typing.Final[list] = mantomlobj.make()
+        if len(urlhashlist) == 0 and gui == False:
+            errmes = 'Error: Not found the manual name. [{0}]'.format(
+                opt.manname)
+            raise MmanStdError(errmes)
+        elif len(urlhashlist) == 0 and gui == True:
+            return ''
+        pagerstr: str = ''
+        gzbys: bytes = b''
+        pcache = Man_pagercache()
+        pcache.init(cache.tmpdir)
+        pagerurl: str = urlhashlist[0][0]
+        hit, pagerstr = pcache.get_pager(pagerurl)
+        if hit != True:
+            pagerstr = ''
+            for tpl in urlhashlist:
+                pagerurl, hashdg = tpl
+                pagerstr, gzbys = _main_man.getstring_pagerurl(
+                    pagerurl, hashdg)
+                if pagerstr != '':
+                    break
+        if pagerstr == '':
+            errmes = 'Error: Not found the url. [{0}]'.format(pagerurl)
+            raise MmanStdError(errmes)
+        pcache.store_pager(hit, pagerurl, gzbys)
+        if gui:
+            cache.remove_oldcache()
+            return pagerstr
+        s = pagerstr
+        if sys.platform == 'darwin':
+            s = unicodedata.normalize('NFD', s)
+        elif sys.platform == 'win32':
+            s = unicodedata.normalize('NFC', s)
+        s = _main_man.norm_punctuation(s)
+        self.change_pager(lang)
+        pydoc.pager(s)
+        print('OSNAME(man):', mantomlobj.osname)
+        print(roottomlobj.message)
+        cache.remove_oldcache()
+        if opt.showtmpdir:
+            print('tmpdir:', cache.tmpdir)
+        exit(0)
+
+    def create_mainargs(self) -> [str, str, types.SimpleNamespace]:
+        opt = self.make_initopt()
         arg1 = ''
         arg2 = ''
         on_manhash = False
@@ -998,6 +1109,9 @@ class Main_manXXYY(object):
             if arg == '--listman':
                 opt.listman = True
                 break
+            if arg == '--license':
+                opt.license = True
+                break
             if arg in listmandict.keys():
                 setattr(opt, listmandict[arg], True)
                 break
@@ -1010,84 +1124,7 @@ class Main_manXXYY(object):
             errmes = 'Error: Invalid args option. [{0}]'.format(arg)
             print(errmes, file=sys.stderr)
             exit(1)
-        vernamekey = opt.release if opt.release != '' else '@LATEST-RELEASE'
-        if opt.listos:
-            _main_man.show_listos(
-                self.manenv_os2, self.manenv_lang, self.manenv_arch)
-            exit(0)
-        if opt.listman:
-            _main_man.show_listman(
-                vernamekey, self.manenv_os2, self.manenv_lang, self.manenv_arch)
-        chklist: list = [False, opt.listman1, opt.listman2, opt.listman3, opt.listman4,
-                         opt.listman5, opt.listman6, opt.listman7, opt.listman8, opt.listman9]
-        if any(chklist):
-            n: int = chklist.index(True)
-            if 1 <= n <= 9:
-                _main_man.show_listman_n(
-                    n, vernamekey, self.manenv_os2, self.manenv_lang, self.manenv_arch)
-            errmes = 'Error: Runtime Error. Invalid --listman[N]'
-            print(errmes)
-            exit(1)
-        self.check_terminal(lang)
-        if arg2 == '':
-            opt.manname = arg1  # e.g. args: ls
-        else:
-            opt.mannum = arg1  # e.g. args: 1 ls
-            opt.manname = arg2
-        roottomlobj = Man_roottoml()
-        roottomlobj.og_vernamekey = vernamekey
-        roottomlobj.og_manhashfpath = opt.manhashfpath
-        roottomlobj.og_roottomlfpath = ''
-        roottomlobj.og_manenv_os2 = self.manenv_os2
-        roottomlobj.og_manenv_lang = self.manenv_lang
-        roottomlobj.og_manenv_arch = self.manenv_arch
-        tomldic = roottomlobj.make()
-        mantomlobj = Man_mantoml()
-        mantomlobj.og_tomldic = tomldic.copy()
-        mantomlobj.og_osname_root = roottomlobj.osname
-        mantomlobj.og_mannum = opt.mannum
-        mantomlobj.og_manname = opt.manname
-        mantomlobj.og_baseurls = roottomlobj.baseurls
-        mantomlobj.og_fnamemode = 'hash'
-        urlhashlist: typing.Final[list] = mantomlobj.make()
-        if len(urlhashlist) == 0:
-            errmes = 'Error: Not found the manual name. [{0}]'.format(
-                opt.manname)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        pagerstr: str = ''
-        gzbys: bytes = b''
-        pcache = Man_pagercache()
-        pcache.init(cache.tmpdir)
-        pagerurl: str = urlhashlist[0][0]
-        hit, pagerstr = pcache.get_pager(pagerurl)
-        if hit != True:
-            pagerstr = ''
-            for tpl in urlhashlist:
-                pagerurl, hashdg = tpl
-                pagerstr, gzbys = _main_man.getstring_pagerurl(
-                    pagerurl, hashdg)
-                if pagerstr != '':
-                    break
-        if pagerstr == '':
-            errmes = 'Error: Not found the url. [{0}]'.format(pagerurl)
-            print(errmes, file=sys.stderr)
-            exit(1)
-        pcache.store_pager(hit, pagerurl, gzbys)
-        s = pagerstr
-        if sys.platform == 'darwin':
-            s = unicodedata.normalize('NFD', s)
-        elif sys.platform == 'win32':
-            s = unicodedata.normalize('NFC', s)
-        s = _main_man.norm_punctuation(s)
-        self.change_pager(lang)
-        pydoc.pager(s)
-        print('OSNAME(man):', mantomlobj.osname)
-        print(roottomlobj.message)
-        cache.remove_oldcache()
-        if opt.showtmpdir:
-            print('tmpdir:', cache.tmpdir)
-        exit(0)
+        return arg1, arg2, opt
 
 
 class Main_mman(object):
@@ -1148,7 +1185,11 @@ def main_manenfb():
 
 def main_manjpfb():
     cls = Main_manXXYY()
-    cls.main(os2='fb', lang='jpn', arch='arm64')
+    try:
+        cls.main(os2='fb', lang='jpn', arch='arm64')
+    except MmanStdError as e:
+        print(e, file=sys.stderr)
+        exit(1)
     return
 
 

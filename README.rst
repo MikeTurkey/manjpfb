@@ -20,8 +20,8 @@ manjpfb
 =================================
 
   |  manjpfb created by MikeTurkey
-  |  Version 0.0.7, 28 Dec 2024
-  |  2024, COPYRIGHT MikeTurkey, All Right Reserved.
+  |  Version 0.0.8, 1 Jan 2025
+  |  2024-2025, COPYRIGHT MikeTurkey, All Right Reserved.
   |  ABSOLUTELY NO WARRANTY.
   |  GPLv3 License including a prohibition clause for AI training.
 
