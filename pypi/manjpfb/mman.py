@@ -55,6 +55,7 @@ import hashlib
 import pathlib
 import tempfile
 import multiprocessing
+import urllib.request
 if __name__ == '__main__':
     from man_mother_mary import MmanStdError, Mainfunc, Mmanfunc, Man_cache, Man_pagercache
 else:
@@ -64,30 +65,453 @@ else:
         from man_mother_mary import MmanStdError, Mainfunc, Mmanfunc, Man_cache, Man_pagercache
 
 
-class Man_roottoml_subroutine(object):
-    @staticmethod
-    def sort_urllist(urls: list, roottomlurl: str) -> list:
-        ptn: str = r'^https\:\/\/[0-9a-zA-Z\.\_\-]+\/'
-        reobj = re.match(ptn, roottomlurl)
-        if reobj == None:
-            return urls
-        domainstr: str = ''
-        domainstr = reobj.group(0) if reobj == None else ''  # type: ignore
-        domainstr = domainstr.rstrip('/')
-        newurls: list = [
-            url for url in urls if url.startswith(domainstr) == True]
-        newurls += [url for url in urls if url.startswith(domainstr) != True]
-        return newurls
+class Opt_http_header(object):
+    __slots__ = ['_x_mman_enable',
+                 '_user_agent',
+                 '_x_mman_roottomlid',
+                 '_x_mman_mantomlid']
 
+    def __init__(self):
+        self._x_mman_enable: str = ''
+        self._user_agent: str = ''
+        self._x_mman_roottomlid: str = ''
+        self._x_mman_mantomlid: str = ''
+        return
+
+    @property
+    def x_mman_enable(self) -> str:
+        return self._x_mman_enable
+
+    @property
+    def user_agent(self) -> str:
+        return self._user_agent
+
+    @property
+    def x_mman_roottomlid(self) -> str:
+        return self._x_mman_roottomlid
+
+    @property
+    def x_mman_mantomlid(self) -> str:
+        return self._x_mman_mantomlid
+
+    @x_mman_enable.setter
+    def x_mman_enable(self, v: str):
+        if isinstance(v, str) != True:
+            errmes: str = 'Error: x_mman_enable is NOT string type.'
+            raise TypeError(errmes)
+        self._x_mman_enable = v.upper()
+        return
+
+    @user_agent.setter
+    def user_agent(self, v: str):
+        ptn: str = r'^m[0-9a-z]+\/[0-9]?[0-9]?[0-9]\.[0-9]?[0-9]?[0-9]\.[0-9]?[0-9]?[0-9]'
+        if re.match(ptn, v) == None:
+            errmes: str = 'Error: Invalid user-agent. [{0}]'.format(v)
+            raise MmanStdError(errmes)
+        self._user_agent = v
+        return
+
+    @x_mman_roottomlid.setter
+    def x_mman_roottomlid(self, v: str):
+        ptn: str = r'^[0-9a-f]{64}'
+        if re.match(ptn, v) == None:
+            errmes: str = 'Error: Invalid x-mman-roottomlid [{0}]'.format(v)
+            raise MmanStdError(errmes)
+        self._x_mman_roottomlid = v
+        return
+
+    @x_mman_mantomlid.setter
+    def x_mman_mantomlid(self, v: str):
+        ptn: str = r'^[0-9a-f]{64}'
+        if re.match(ptn, v) == None:
+            errmes: str = 'Error: Invalid x-mman-mantomlid [{0}]'.format(v)
+            raise MmanStdError(errmes)
+        self._x_mman_mantomlid = v
+        return
+
+    def print_attributes(self):
+        for rawvname in self.__slots__:
+            vname = rawvname.removeprefix('_')
+            v = getattr(self, rawvname)
+            mes: str = '{0} : {1}'.format(vname, v)
+            print(mes)
+
+
+class Man_loadurl_getnpdata(typing.NamedTuple):
+    data: bytes
+    url: str
+
+    def string(self) -> str:
+        return self.data.decode('UTF-8')
+
+    def gzdecompress(self) -> bytes:
+        return gzip.decompress(self.data)
+
+    def gzdecompress_string(self) -> bytes:
+        b: bytes = gzip.decompress(self.data)
+        return b.decode('UTF-8')
+
+    def compare(self, hashdg: str) -> bool:
+        ptn: str = r'^[0-9a-f]{64}$'
+        if re.match(ptn, hashdg) == None:
+            errmes = 'Error: Not hashdigest.'
+            raise MmanStdError(errmes)
+        hobj = hashlib.new('SHA3-256')
+        hobj.update(self.data)
+        hashdg_body: str = hobj.hexdigest()
+        if hashdg != hashdg_body:
+            warnmes = 'Warning: Not match hashdigest, [{0}]'.format(self.url)
+            print(warnmes)
+            print('  hashdg      :', hashdg)
+            print('  hashdg(body):', hashdg_body)
+            return False
+        return True
+
+
+class Man_loadurl_chkretfc(object):
+    @staticmethod
+    def chkfc_hashdgsha3(body: bytes) -> bool:
+        urlstring: str = body.decode('UTF-8')
+        if urlstring.startswith('SHA3-256(') != True:
+            return False
+        splitted: list = urlstring.rsplit(')= ', 1)
+        if len(splitted) != 2:
+            return False
+        hashdg_sec: str = splitted[1].strip()
+        ptn: str = r'[0-9a-f]{64}$'
+        reobj = re.match(ptn, hashdg_sec)
+        if reobj == None:
+            return False
+        return True
+
+    @staticmethod
+    def retfc_hashdgsha3(body: bytes) -> bytes:
+        if isinstance(body, bytes) != True:
+            errmes: str = 'Error: body is not bytes type.'
+            raise TypeError(errmes)
+        if body.startswith(b'SHA3-256(') != True:
+            return b''
+        splitted: list = body.rsplit(b')= ', 1)
+        if len(splitted) != 2:
+            return b''
+        hashdg: bytes = splitted[1].strip()
+        ptnstr: str = r'[0-9a-f]{64}$'
+        ptn: bytes = ptnstr.encode()
+        reobj = re.match(ptn, hashdg)
+        if reobj == None:
+            return ''
+        return hashdg
+
+
+class Man_loadurl(object):
+    __slots__ = ['_header_x_mman_enable',
+                 '_header_user_agent',
+                 '_header_x_mman_roottomlid',
+                 '_header_x_mman_mantomlid', '_urls',
+                 '_fastestdomain', '_timeout',
+                 '_request_starttime',
+                 '_pobjlist']
+
+    def __init__(self):
+        self._header_x_mman_enable: str = ''
+        self._header_user_agent: str = ''
+        self._header_x_mman_roottomlid: str = ''
+        self._header_x_mman_mantomlid: str = ''
+        self._urls: tuple[str] = tuple([''])
+        self._fastestdomain: str = ''
+        self._timeout: float = 10
+        self._request_starttime: float = 0.0
+        self._pobjlist: tuple = tuple()
+        return
+
+    @property
+    def header_x_mman_enable(self) -> str:
+        return self._header_x_mman_enable
+
+    @property
+    def header_user_agent(self) -> str:
+        return self._header_user_agent
+
+    @property
+    def header_x_mman_roottomlid(self) -> str:
+        return self._header_x_mman_roottomlid
+
+    @property
+    def header_x_mman_mantomlid(self) -> str:
+        return self._header_x_mman_mantomlid
+
+    @property
+    def urls(self) -> tuple[str]:
+        return self._urls
+
+    @property
+    def fastestdomain(self) -> str:
+        return self._fastestdomain
+
+    @property
+    def timeout(self) -> float:
+        return self._timeout
+
+    @property
+    def request_starttime(self) -> float:
+        return self._request_starttime
+
+    @header_x_mman_enable.setter
+    def header_x_mman_enable(self, v: str):
+        if isinstance(v, str) != True:
+            errmes: str = 'Error: x_mman_enable is NOT string type.'
+            raise TypeError(errmes)
+        self._header_x_mman_enable = v.upper()
+        return
+
+    @header_user_agent.setter
+    def header_user_agent(self, v: str):
+        ptn: str = r'^m[a-z]+\/[0-9]?[0-9]?[0-9]\.[0-9]?[0-9]?[0-9]\.[0-9]?[0-9]?[0-9]'
+        if re.match(ptn, v) == None:
+            errmes: str = 'Error: Invalid user-agent. [{0}]'.format(v)
+            raise MmanStdError(errmes)
+        self._header_user_agent = v
+        return
+
+    @header_x_mman_roottomlid.setter
+    def header_x_mman_roottomlid(self, v: str):
+        ptn: str = r'^[0-9a-f]{64}'
+        if re.match(ptn, v) == None:
+            errmes: str = 'Error: Invealid x-mman-roottomlid [{0}]'.format(v)
+            raise MmanStdError(errmes)
+        self._header_x_mman_roottomlid = v
+        return
+
+    @header_x_mman_mantomlid.setter
+    def header_x_mman_mantomlid(self, v: str):
+        ptn: str = r'^[0-9a-f]{64}'
+        if re.match(ptn, v) == None:
+            errmes: str = 'Error: Invalid x-mman-mantomlid [{0}]'.format(v)
+            raise MmanStdError(errmes)
+        self._header_x_mman_mantomlid = v
+        return
+
+    @urls.setter
+    def urls(self, v: list | tuple):
+        chklist: list = [isinstance(v, list), isinstance(v, tuple)]
+        if chklist.count(True) == 0:
+            errmes: str = 'Error: urls is not list or tuple.'
+            raise MmanStdError(errmes)
+        if len(v) == 0:
+            errmes: str = 'Error: urls is empty.'
+            raise MmanStdError(errmes)
+        self._urls = tuple(v)
+        return
+
+    @fastestdomain.setter
+    def fastestdomain(self, v: str):
+        if isinstance(v, str) != True:
+            errmes: str = 'Error: fastestdomain is NOT string type.'
+            raise TypeError(errmes)
+        s1: str = v.removeprefix('https://') if v.startswith('https://') else v
+        splitted: list = s1.split('/', maxsplit=1)
+        self._fastestdomain = splitted[0]
+        return
+
+    @timeout.setter
+    def timeout(self, v: float | int):
+        if isinstance(v, float) != True and isinstance(v, int) != True:
+            errmes: str = 'Error: timeout is NOT float or integer type.'
+            raise TypeError(errmes)
+        if v < 0:
+            errmes = 'Error: timeout is NOT positive. [{0}]'.format(v)
+            raise ValueError(errmes)
+        self._timeout = v
+        return
+
+    def _fastesturl(self) -> str:
+        if len(self.urls) == 0:
+            errmes: str = 'Error: empty Man_loadurl.urls'
+            raise MmanStdError(errmes)
+        if self.fastestdomain == '':
+            return self.urls[0]
+        for url in self.urls:
+            splitted: tuple = tuple(url.split('://'))
+            if len(splitted) != 2:
+                errmes = 'Error: Invalid url. [{0}]'.format(url)
+                raise MmanStdError(errmes)
+            s: str = splitted[1]
+            if s.startswith(self.fastestdomain):
+                return url
+        return self.urls[0]
+
+    def print_attributes(self):
+        for vname in self.__slots__:
+            v = getattr(self, vname)
+            mes: str = '{0}: {1}'.format(vname, v)
+            print(mes)
+        return
+
+    def getdata(self, exception: bool = True,
+                chkfc: typing.Callable = lambda x: True if x != b'' else False,
+                retfc: typing.Callable = lambda x: x) -> Man_loadurl_getnpdata:
+        def urliter(self):
+            urlpath: str = self._fastesturl()
+            yield urlpath
+            for url in self.urls:
+                if url == urlpath:
+                    continue
+                yield url
+            return
+        errmes: str = ''
+        errmeslist: list = list()
+        for urlpath in urliter(self):
+            request = urllib.request.Request(urlpath)
+            chklist: list = [(self.header_x_mman_enable, 'x-mman-enable'),
+                             (self.header_user_agent, 'user-agent'),
+                             (self.header_x_mman_roottomlid, 'x-mman-roottomlid'),
+                             (self.header_x_mman_mantomlid, 'x-mman-mantomlid')]
+            for hvalue, hname in chklist:
+                if hvalue != '':
+                    request.add_header(hname, hvalue)
+            html_content: bytes = b''
+            try:
+                with urllib.request.urlopen(request, timeout=self.timeout) as response:
+                    html_content = response.read()
+                    self._request_starttime = time.time()
+            except urllib.error.URLError as e:
+                errmes = 'Error: URL Error. {0}, URL: {1}'.format(e, urlpath)
+                errmeslist.append(errmes)
+            except urllib.error.HTTPError as e:
+                errmes = 'Error: HTTP Error. {0}, URL: {1}'.format(e, urlpath)
+                errmeslist.append(errmes)
+            except Exception as e:
+                errmes = 'Error: Runtime Error. {0}, URL: {1}'.format(
+                    e, urlpath)
+                errmeslist.append(errmes)
+            if chkfc(html_content):
+                break
+        if html_content == b'' and len(errmeslist) >= 1 and exception == True:
+            errmes = '\n'.join(errmeslist)
+            raise MmanStdError(errmes)
+        elif html_content == b'' and len(errmeslist) >= 1:
+            retobj: Man_loadurl_getnpdata = Man_loadurl_getnpdata(
+                data=b'', url=urlpath)
+            return retobj
+        retfc_content: bytes = retfc(html_content)
+        if isinstance(retfc_content, bytes) != True:
+            errmes = 'Error: retfc_content is not bytes type.'
+            raise MmanStdError(errmes)
+        retobj: Man_loadurl_getnpdata = Man_loadurl_getnpdata(
+            data=retfc_content, url=urlpath)
+        return retobj
+
+    @staticmethod
+    def _loadurl_by_request(request, retqueue, rettype: str, timeout: float):
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                html_content = response.read()
+        except:
+            html_content: bytes = b''
+        result: tuple = tuple()
+        if rettype == 'bytes':
+            result = (request.full_url, html_content)
+        elif rettype == 'string':
+            result = (request.full_url, html_content.decode('UTF-8'))
+        timeout: int = int(time.time()) + 3
+        while timeout > int(time.time()):
+            try:
+                retqueue.put_nowait(result)
+            except:
+                time.sleep(0.07)
+            break
+        return
+
+    def getdata_1stmp(self, exception: bool = True,
+                      chkfc: typing.Callable[[bytes], bool] = None,
+                      retfc: typing.Callable[[bytes], bytes] = lambda x: x)\
+            -> Man_loadurl_getnpdata:
+        timeout: int = 10
+        requests: list = list()
+        for urlpath in self.urls:
+            request = urllib.request.Request(urlpath)
+            chklist: list = [(self.header_x_mman_enable, 'x-mman-enable'),
+                             (self.header_user_agent, 'user-agent'),
+                             (self.header_x_mman_roottomlid, 'x-mman-roottomlid'),
+                             (self.header_x_mman_mantomlid, 'x-mman-mantomlid')]
+            for hvalue, hname in chklist:
+                if hvalue != '':
+                    request.add_header(hname, hvalue)
+            requests.append(request)
+        if len(self._pobjlist) >= 1:
+            self.close()
+        retqueue: multiprocessing.queues.Queue = multiprocessing.Queue()
+        func: typing.Callable = self._loadurl_by_request
+        pobjlist: list = list()
+        for request in requests:
+            funcargs: list = [request, retqueue, 'bytes', self.timeout]
+            pobj = multiprocessing.Process(target=func, args=funcargs)
+            pobjlist.append(pobj)
+        self._pobjlist = tuple(pobjlist)
+        [pobj.start() for pobj in pobjlist]
+        self._request_starttime = time.time()
+        t: tuple = tuple()
+        returl: str = ''
+        retbody: bytes = b''
+        time_end: int = int(time.time()) + timeout
+
+        def default_chkfc(retbody: bytes):
+            ret: bool = True if retbody != b'' else False
+            return ret
+        if chkfc == None:
+            chkfc = default_chkfc
+        while time_end >= int(time.time()):
+            try:
+                t = retqueue.get_nowait()
+                returl = t[0]
+                retbody = t[1]
+            except:
+                time.sleep(0.1)
+                continue
+            if chkfc(retbody):
+                break
+            if retbody != b'':
+                break
+        if retbody == b'':
+            returl = ''
+        retfc_retbody = retfc(retbody)
+        if isinstance(retfc_retbody, bytes) != True:
+            errmes = 'Error: retrc_retbody is not bytes type.'
+            raise TypeError(errmes)
+        npdata: Man_loadurl_getnpdata = Man_loadurl_getnpdata(
+            data=retfc_retbody, url=returl)
+        return npdata
+
+    def close(self):
+        if len(self._pobjlist) == 0:
+            return
+        timeout: typing.Final[float] = self._request_starttime + \
+            self.timeout + 0.2
+        while timeout > time.time():
+            chklist: list = [
+                True for pobj in self._pobjlist if pobj.is_alive() == True]
+            if len(chklist) == 0:
+                return
+            time.sleep(0.1)
+        for pobj in self._pobjlist:
+            if pobj.is_alive():
+                pobj.terminate()
+                while pobj.is_alive():
+                    time.sleep(0.1)
+        return
+
+
+class Man_roottoml_subroutine(object):
     @staticmethod
     def get_hashdg_url(roottomlurl_sha3: str) -> str:
         mainfunc = Mainfunc
+        mmanfunc = Mmanfunc
         warnmes: str = ''
         if isinstance(roottomlurl_sha3, str) != True:
             errmes = 'Error: url is NOT string type on get_hashdg_url()'
             raise TypeError(errmes)
         urlstring: str = ''
-        urlstring = mainfunc.loadstring_url(roottomlurl_sha3, exception=False)
+        urlstring = mmanfunc.loadstring_url(roottomlurl_sha3, exception=False)
         if urlstring == '':
             return ''
         if urlstring.startswith('SHA3-256(') != True:
@@ -111,28 +535,12 @@ class Man_roottoml_subroutine(object):
         hashdg_url: str = reobj.group(0) if reobj is not None else ''
         return hashdg_url
 
-    @staticmethod
-    def _load_roottomlurls_childprocess(url: str, retqueue):
-        subr = Man_roottoml_subroutine
-        hashdg: str = subr.get_hashdg_url(url)
-        if hashdg == '':
-            return  # Can not get hash digest
-        ret: tuple = (hashdg, url)
-        while True:
-            try:
-                retqueue.put_nowait(ret)
-            except:
-                time.sleep(0.1)
-                continue
-            break
-        return
-
 
 class Man_roottoml(object):
     __root_sites: typing.Final[list] = [
-        (104, 116, 116, 112, 115, 58, 47, 47, 100, 107, 55, 116, 99,
-         121, 105, 120, 103, 112, 103, 105, 105, 46, 99, 108, 111, 117,
-         100, 102, 114, 111, 110, 116, 46, 110, 101, 116),
+        (104, 116, 116, 112, 115, 58, 47, 47, 100, 49, 101, 101, 56,
+         110, 49, 121, 105, 108, 101, 50, 117, 122, 46, 99, 108, 111,
+         117, 100, 102, 114, 111, 110, 116, 46, 110, 101, 116),
         (104, 116, 116, 112, 115, 58, 47, 47, 109, 105, 107, 101,
          116, 117, 114, 107, 101, 121, 46, 99, 111, 109)]
     __root_dir: typing.Final[str] = '/clidirs/man{0}/{1}/'
@@ -142,9 +550,9 @@ class Man_roottoml(object):
         ('fb', 'eng', 'arm64'): 'enfb',
         ('ob', 'eng', 'arm64'): 'enob'}
     __webdbnums: typing.Final[dict] =\
-        {('fb', 'jpn', 'arm64'): '1001',
-         ('fb', 'eng', 'arm64'): '1001',
-         ('ob', 'eng', 'arm64'): '1001'}
+        {('fb', 'jpn', 'arm64'): '1002',
+         ('fb', 'eng', 'arm64'): '1002',
+         ('ob', 'eng', 'arm64'): '1002'}
 
     def __init__(self):
         self.og_vernamekey: str = ''
@@ -153,18 +561,29 @@ class Man_roottoml(object):
         self.og_manenv_os2: str = ''
         self.og_manenv_lang: str = ''
         self.og_manenv_arch: str = ''
+        self.og_cache_rooturls: tuple = tuple()
+        self.og_cmdname: str = ''
+        self.og_cmdversion: str = ''
+        self.og_cmddate: str = ''
+        self._og_http_header: Opt_http_header = Opt_http_header()
         self._status: str = ''
         self._thedate: str = ''
         self._osname: str = ''
         self._urls: list = list()
-        self._baseurls: list = list()
-        self._manhashfpath: str = ''
+        self._baseurls: tuple[str] = tuple()
         self._message: str = ''
+        self._rooturls: tuple[str] = tuple()
+        self._manhashfpath: str = ''
+        self._fastestdomain: str = ''
         self._rootstr: str = ''
         self._roottomlurl: str = ''
         self._rootdic: dict = dict()
         self._mantomlurls: list = list()
         return
+
+    @property
+    def og_http_header(self) -> Opt_http_header:
+        return self._og_http_header
 
     @property
     def status(self) -> str:
@@ -183,16 +602,32 @@ class Man_roottoml(object):
         return self._urls
 
     @property
-    def baseurls(self) -> list:
+    def baseurls(self) -> tuple:
         return self._baseurls
+
+    @property
+    def message(self) -> str:
+        return self._message
+
+    @property
+    def rooturls(self) -> tuple:
+        return self._rooturls
 
     @property
     def manhashfpath(self) -> str:
         return self._manhashfpath
 
     @property
-    def message(self) -> str:
-        return self._message
+    def fastestdomain(self) -> str:
+        return self._fastestdomain
+
+    @og_http_header.setter
+    def og_http_header(self, header: Opt_http_header):
+        if isinstance(header, Opt_http_header) != True:
+            errmes: str = 'Error: header object is Not Opt_http_header.'
+            raise TypeError(errmes)
+        self._og_http_header = header
+        return
 
     def print_attributes(self):
         for k, v in self.__dict__.items():
@@ -200,7 +635,7 @@ class Man_roottoml(object):
             print('  v:', v)
         return
 
-    def _getrooturl(self):
+    def _getrooturl(self, cache_rooturls: tuple = tuple()):
         t: tuple = (self.og_manenv_os2, self.og_manenv_lang,
                     self.og_manenv_arch)
         errmes: str = ''
@@ -213,123 +648,74 @@ class Man_roottoml(object):
         if webdbnum == '':
             errmes = 'Error: Not found __webdbnums key. [{0}]'.format(t)
             raise MmanStdError(errmes)
-        root_sites = [''.join([chr(i) for i in t]) for t in self.__root_sites]
+        if len(cache_rooturls) >= 1:
+            root_sites: tuple = cache_rooturls
+        else:
+            root_sites = tuple([''.join([chr(i) for i in t])
+                               for t in self.__root_sites])
+
         def func(x): return x + self.__root_dir.format(root_dir_suffix,
                                                        webdbnum) + self.__root_name
         roottomlurls: list = [func(root_site) for root_site in root_sites]
         return roottomlurls
 
-    def _load_roottomlurls(self, roottomlurls: list, cache: Man_cache) -> tuple[str, str]:
+    def _load_roottomlurls(self, roottomlurls: tuple, cache: Man_cache) -> tuple[str, str]:
         mainfunc = Mainfunc
         subr = Man_roottoml_subroutine
         debug: bool = False
         errmes: str = ''
-        if isinstance(roottomlurls, list) != True:
-            errmes = 'Error: roottomlurls is not list type.'
+        if isinstance(roottomlurls, tuple) != True:
+            errmes = 'Error: roottomlurls is not tuple type.'
             raise TypeError(errmes)
         for url in roottomlurls:
             if url.endswith('toml.gz') != True:
                 errmes = 'Error: Not root.toml.gz file. [{0}]'.format(url)
                 raise MmanStdError(errmes)
         roottomlsha3urls: list = [url + '.SHA3-256' for url in roottomlurls]
-        retqueue: multiprocessing.queues.Queue = multiprocessing.Queue()
-        func: typing.Callable = subr._load_roottomlurls_childprocess
-        pobjlist: list = list()
-        for url in roottomlsha3urls:
-            pobj = multiprocessing.Process(target=func, args=(url, retqueue))
-            pobjlist.append(pobj)
-        [pobj.start() for pobj in pobjlist]
-        t: tuple = tuple()
-        hashdg_url: str = ''
-        roottomlurl_sha3: str = ''
-        time_end: int = int(time.time()) + 10
-        while time_end >= int(time.time()):
-            try:
-                t = retqueue.get_nowait()
-                hashdg_url = t[0]
-                roottomlurl_sha3 = t[1]
-            except:
-                time.sleep(0.1)
-                continue
-            break
-
-        def finish_child(pobjlist):
-            for pobj in pobjlist:
-                if pobj.is_alive():
-                    pobj.terminate()
-                    while pobj.is_alive():
-                        time.sleep(0.1)
-            return
+        loadurl = Man_loadurl()
+        loadurl.header_x_mman_enable = self.og_http_header.x_mman_enable
+        loadurl.header_user_agent = self.og_http_header.user_agent
+        loadurl.timeout = 0.8
+        loadurl.urls = tuple(roottomlsha3urls)
+        sha3chkfc: typing.Callable = Man_loadurl_chkretfc.chkfc_hashdgsha3
+        sha3retfc: typing.Callable = Man_loadurl_chkretfc.retfc_hashdgsha3
+        npdata: Man_loadurl_getnpdata = loadurl.getdata_1stmp(
+            chkfc=sha3chkfc, retfc=sha3retfc)
+        roottomlurl_sha3: str = npdata.url
+        hashdg_url: str = npdata.string()
         if hashdg_url == '':
-            errmes = '\n'.join([url for url in roottomlsha3urls])
-            errmes += '\nError: Can not download root.toml.gz.SHA3-256'
-            finish_child(pobjlist)
+            errmes = 'Error: Can not download the url. [{0}]'.format(
+                loadurl.urls)
             raise MmanStdError(errmes)
-        finish_child(pobjlist)
-        roottomlurls = subr.sort_urllist(roottomlurls, roottomlurl_sha3)
+        self._fastestdomain = roottomlurl_sha3
+        self.og_http_header.x_mman_roottomlid = hashdg_url
+        loadurl.close()
         hit: bool
         rootstr: str
         hit, rootstr = cache.get_roottoml(hashdg_url)
+        hit = False
         gzbys: bytes = b''
         if hit != True:
-            for roottomlurl in roottomlurls:
-                gzbys = mainfunc.loadbytes_url(roottomlurl, exception=False)
-                if gzbys != b'':
-                    break
-            if gzbys == b'':
-                errmes = '\n'.join([url for url in roottomlurls])
-                errmes += '\nError: Can not download root.toml.gz'
-                raise MmanStdError(errmes)
-            hobj = hashlib.new('SHA3-256')
-            hobj.update(gzbys)
-            hashdg_body: str = hobj.hexdigest()
-            if hashdg_url != hashdg_body:
-                warnmes = 'Warning: Not match hashdigest of root.toml.gz.'
-                print(warnmes)
-                print('  hashdg_url :', hashdg_url)
-                print('  hashdg_body:', hashdg_body)
-            rootbys: bytes = gzip.decompress(gzbys)
-            rootstr = rootbys.decode('UTF-8')
+            loadurl = Man_loadurl()
+            loadurl.header_x_mman_enable = self.og_http_header.x_mman_enable
+            loadurl.header_user_agent = self.og_http_header.user_agent
+            loadurl.header_x_mman_roottomlid = self.og_http_header.x_mman_roottomlid
+            loadurl.timeout = 1.5
+            loadurl.fastestdomain = self.fastestdomain
+            loadurl.urls = tuple(roottomlurls)
+            npdata: Man_loadurl_getnpdata = loadurl.getdata()
+            npdata.compare(hashdg_url)
+            roottomlurl: str = npdata.url
+            gzbys: bytes = npdata.data
+            rootstr = npdata.gzdecompress_string()
         else:
-            roottomlurl = roottomlurls[0]
+            roottomlurl = ''
         if debug:
             print('hit of root:', hit)
         cache.store_roottoml(hit, gzbys)
         return rootstr, roottomlurl
 
-    @staticmethod
-    def _sort_baseurls(baseurls: list, roottomlurl: str) -> list:
-        subr = Man_roottoml_subroutine
-        return subr.sort_urllist(baseurls, roottomlurl)
-
-    @staticmethod
-    def _sort_urls_on_rootdic(rootdic: dict, roottomlurl: str) -> dict:
-        ptn: str = r'^https\:\/\/[0-9a-zA-Z\.\_\-]+\/'
-        reobj = re.match(ptn, roottomlurl)
-        if reobj == None:
-            return rootdic
-        domainstr: str = reobj.group(0) if reobj is not None else ''
-        domainstr = domainstr.rstrip('/')
-        newrootdic: dict = dict()
-        for dfkey, dfval in rootdic.items():
-            if isinstance(dfval, dict) != True:
-                newrootdic[dfkey] = dfval
-                continue
-            newdfval: dict = dict()
-            for key, val in dfval.items():
-                if key != 'urls':
-                    newdfval[key] = val
-                    continue
-                newurls: list = [
-                    url for url in val if url.startswith(domainstr) == True]
-                newurls += [url for url in val if url.startswith(
-                    domainstr) != True]
-                newdfval[key] = newurls
-            newrootdic[dfkey] = newdfval
-        return newrootdic
-
-    @staticmethod
-    def _load_mantomlurls(mantomlurls: list, cache: Man_cache) -> dict:
+    def _load_mantomlurls(self, mantomlurls: list, cache: Man_cache) -> dict:
         mainfunc = Mainfunc
         subr = Man_roottoml_subroutine
         debug: bool = False
@@ -341,30 +727,48 @@ class Man_roottoml(object):
                 errmes = 'Error: url is invalid extension. [{0}]'.format(url)
                 raise MmanStdError(errmes)
         mantomlsha3urls: list = [url + '.SHA3-256' for url in mantomlurls]
-        hashdg_url: str = ''
-        for url in mantomlsha3urls:
-            hashdg_url = subr.get_hashdg_url(url)
-            if hashdg_url != '':
-                break
+        loadurl = Man_loadurl()
+        loadurl.header_x_mman_enable = self.og_http_header.x_mman_enable
+        loadurl.header_user_agent = self.og_http_header.user_agent
+        loadurl.header_x_mman_roottomlid = self.og_http_header.x_mman_roottomlid
+        loadurl.timeout = 0.8
+        loadurl.fastestdomain = self.fastestdomain
+        loadurl.urls = tuple(mantomlsha3urls)
+        sha3chkfc: typing.Callable = Man_loadurl_chkretfc.chkfc_hashdgsha3
+        sha3retfc: typing.Callable = Man_loadurl_chkretfc.retfc_hashdgsha3
+        npdata: Man_loadurl_getnpdata = loadurl.getdata(
+            chkfc=sha3chkfc, retfc=sha3retfc)
+        hashdg_url = npdata.string()
         if hashdg_url == '':
-            errmes = 'Error: Can not load the url.[{0}]'.format(url)
+            errmes = 'Error: Can not load the url.\n'
+            for url in mantomlsha3urls:
+                errmes += '  URL: {0}\n'.format(url)
             raise MmanStdError(errmes)
+        ptn: str = r'[0-9a-f]{64}$'
+        if re.match(ptn, hashdg_url) == None:
+            errmes = 'Error: hashdg_url is NOT hashdg. [{0}]'.format(
+                hashdg_url)
+            raise MmanStdError(errmes)
+        self.og_http_header.x_mman_mantomlid = hashdg_url
         gzbys: bytes = b''
-        mantomlbys: bytes = b''
         mantomlstr: str = ''
         tomldic: dict = dict()
         hit: bool = False
         hit, mantomlstr = cache.get_mantoml(mantomlurls[0], hashdg_url)
         if not hit:
-            for url in mantomlurls:
-                gzbys = mainfunc.loadbytes_url(url)
-                if gzbys != b'':
-                    break
-            if gzbys == b'':
-                errmes = 'Error: Can not load the url.[{0}]'.format(url)
-                raise MmanStdError(errmes)
-            mantomlbys = gzip.decompress(gzbys)
-            mantomlstr = mantomlbys.decode('UTF-8')
+            loadurl = Man_loadurl()
+            loadurl.header_x_mman_enable = self.og_http_header.x_mman_enable
+            loadurl.header_user_agent = self.og_http_header.user_agent
+            loadurl.header_x_mman_roottomlid = self.og_http_header.x_mman_roottomlid
+            loadurl.header_x_mman_mantomlid = self.og_http_header.x_mman_mantomlid
+            loadurl.header_x_mman_mantomlid = hashdg_url
+            loadurl.timeout = 0.8
+            loadurl.fastestdomain = self.fastestdomain
+            loadurl.urls = tuple(mantomlurls)
+            mantoml: Man_loadurl_getnpdata = loadurl.getdata()
+            mantoml.compare(hashdg_url)
+            gzbys: bytes = mantoml.data
+            mantomlstr: str = mantoml.gzdecompress_string()
         if debug:
             print('hit of man.toml.gz:', hit)
             print('mantomlurl:', mantomlurls[0])
@@ -375,9 +779,18 @@ class Man_roottoml(object):
     def make(self):
         mainfunc = Mainfunc
         cache = Man_cache()
-        cache.init(self.og_manenv_os2, self.og_manenv_lang,
-                   self.og_manenv_arch)
-        roottomlurls: typing.Final[list[str]] = self._getrooturl()
+        cache.init(self.og_manenv_os2, self.og_manenv_lang, self.og_manenv_arch,
+                   self.og_cmdversion, self.og_cmddate)
+        enable_cache: bool = True
+        if len(self.og_cache_rooturls) >= 1 and enable_cache == True:
+            tmplist: list = self._getrooturl(
+                cache_rooturls=self.og_cache_rooturls)
+            roottomlurls: tuple[str] = tuple(tmplist)
+        else:
+            roottomlurls = tuple(self._getrooturl())
+        if not enable_cache:
+            mes: str = 'Warning: Disable cache, roottomlurls'
+            print(mes)
         errmes: str
         vname: str
         chklist: list = [('og_veramekey', self.og_vernamekey),
@@ -410,15 +823,13 @@ class Man_roottoml(object):
         rootdic = tomllib.loads(rootstr)
         self._rootstr = rootstr
         self._rootdic = copy.copy(rootdic)
-        self._baseurls = rootdic.get('baseurls', [])
-        if len(self.baseurls) == 0:
-            errmes = 'Error: Empty baseurls values in root.toml'
-            raise MmanStdError(errmes)
+        for vname in ['rooturls', 'baseurls']:
+            tmplist: list = rootdic.get(vname, [])
+            if len(tmplist) == 0:
+                errmes = 'Error: Empty {0} values in root.toml'.format(vname)
+                raise MmanStdError(errmes)
+            setattr(self, '_' + vname, tuple(tmplist))
         self._message = rootdic.get('message', '')
-        if self._roottomlurl != '':
-            self._baseurls = self._sort_baseurls(
-                self._baseurls, self._roottomlurl)
-            rootdic = self._sort_urls_on_rootdic(rootdic, self._roottomlurl)
         url: str
         tpl: tuple
         vernamekey: str = ''
@@ -432,13 +843,18 @@ class Man_roottoml(object):
         return copy.copy(tomldic)
 
 
+class Man_mantoml_retmake(typing.NamedTuple):
+    pagerurls: tuple
+    hashdg: str
+
+
 class Man_mantoml(object):
     def __init__(self):
         self.og_tomldic: dict = dict()
         self.og_osname_root: str = ''
         self.og_mannum: str = ''
         self.og_manname: str = ''
-        self.og_baseurls: list = list()
+        self.og_baseurls: tuple = tuple()
         self.og_fnamemode: str = 'hash'
         self._osname: str = ''
         self._arch: str = ''
@@ -502,8 +918,8 @@ class Man_mantoml(object):
     def vcheck_og_baseurls(self):
         errmes: str
         url: str
-        if isinstance(self.og_baseurls, list) != True:
-            errmes = 'Error: Man_mantoml.og_baseurls is NOT list type.'
+        if isinstance(self.og_baseurls, tuple) != True:
+            errmes = 'Error: Man_mantoml.og_baseurls is NOT tuple type.'
             raise TypeError(errmes)
         if len(self.og_baseurls) == 0:
             errmes = 'Error: Runtime Error, Empty Man_mantoml.og_baseurls.'
@@ -563,6 +979,8 @@ class Man_mantoml(object):
         return
 
     def make(self) -> list[tuple]:
+        retempty: Man_mantoml_retmake = Man_mantoml_retmake(
+            pagerurls=tuple(), hashdg='')
         self.vcheck_og_tomldic()
         self.vcheck_og_osname_root()
         self.vcheck_og_mannum()
@@ -585,10 +1003,12 @@ class Man_mantoml(object):
                 mainfunc = Mainfunc
                 s: typing.Final[str] = baseurl + '/' + \
                     hashdg[0:2] + '/' + hashdg + '/' + fname
-                return (mainfunc.normurl(s), hashdg)
-            hashurls: list = [inloop1(baseurl, hashdg, fname_new)
-                              for baseurl in self.og_baseurls]
-            fnameurldic[fname] = hashurls
+                return mainfunc.normurl(s)
+            pagerurls: list = [inloop1(baseurl, hashdg, fname_new)
+                               for baseurl in self.og_baseurls]
+            np: Man_mantoml_retmake = Man_mantoml_retmake(
+                pagerurls=tuple(pagerurls), hashdg=hashdg)
+            fnameurldic[fname] = np
         if self.og_osname_root != self.osname:
             errmes = 'Error: Mismatch OSNAME. [{0}, {1}]'.format(
                 self.og_osname_root, self.osname)
@@ -599,13 +1019,16 @@ class Man_mantoml(object):
         else:
             fnameurldictkeys = ['{0}.{1}'.format(
                 self.og_manname, i) for i in range(1, 10)]
-        retlist: list
         for fname in fnameurldictkeys:
-            retlist = fnameurldic.get(fname, [])
-            if len(retlist) >= 1:
-                self._retmake = retlist
-                return retlist
-        return list()
+            retnp: Man_mantoml_retmake = fnameurldic.get(fname, retempty)
+            if retnp != retempty:
+                break
+        return retnp
+
+
+class Np_getstring_pagerurl(typing.NamedTuple):
+    pagerstr: str
+    gzbys: bytes
 
 
 class _Main_man(object):
@@ -654,7 +1077,13 @@ class _Main_man(object):
         exit(0)
 
     @staticmethod
-    def show_listman_n(secnum: int, vernamekey: str, os2: str, lang: str, arch: str, gui: bool) -> str | None:
+    def show_listman_n(secnum: int, vernamekey: str, os2: str, lang: str, arch: str, gui: bool, cache: Man_cache,
+                       cmdversion: str, cmddate: str) -> str | None:
+        mmanfunc = Mmanfunc
+        http_header: Opt_http_header = Opt_http_header()
+        http_header.x_mman_enable = 'YES'
+        http_header.user_agent = mmanfunc.createstr_cmdname(
+            os2, lang, arch) + '/{0}'.format(cmdversion)
         roottomlobj = Man_roottoml()
         roottomlobj.og_vernamekey = '@LATEST-RELEASE'
         roottomlobj.og_manhashfpath = ''
@@ -662,6 +1091,10 @@ class _Main_man(object):
         roottomlobj.og_manenv_os2 = os2
         roottomlobj.og_manenv_lang = lang
         roottomlobj.og_manenv_arch = arch
+        roottomlobj.og_cmdversion = cmdversion
+        roottomlobj.og_cmddate = cmddate
+        roottomlobj.og_rooturls = cache.load_rooturls()
+        roottomlobj.og_http_header = http_header
         tomldic: typing.Final[dict] = roottomlobj.make()
 
         def inloop(name: str, secnum: int) -> str:
@@ -682,7 +1115,13 @@ class _Main_man(object):
         exit(0)
 
     @staticmethod
-    def show_listman(vernamekey: str, os2: str, lang: str, arch: str, gui: bool) -> str | None:
+    def show_listman(vernamekey: str, os2: str, lang: str, arch: str, gui: bool, cache: Man_cache,
+                     cmdversion: str, cmddate: str) -> str | None:
+        mmanfunc = Mmanfunc
+        http_header: Opt_http_header = Opt_http_header()
+        http_header.x_mman_enable = 'YES'
+        http_header.user_agent = mmanfunc.createstr_cmdname(
+            os2, lang, arch) + '/{0}'.format(cmdversion)
         roottomlobj = Man_roottoml()
         roottomlobj.og_vernamekey = '@LATEST-RELEASE'
         roottomlobj.og_manhashfpath = ''
@@ -690,6 +1129,10 @@ class _Main_man(object):
         roottomlobj.og_manenv_os2 = os2
         roottomlobj.og_manenv_lang = lang
         roottomlobj.og_manenv_arch = arch
+        roottomlobj.og_cmdversion = cmdversion
+        roottomlobj.og_cmddate = cmddate
+        roottomlobj.og_rooturls = cache.load_rooturls()
+        roottomlobj.og_http_header = http_header
         tomldic: typing.Final[dict] = roottomlobj.make()
 
         def inloop(name: str) -> str:
@@ -709,8 +1152,14 @@ class _Main_man(object):
         exit(0)
 
     @staticmethod
-    def show_listos(os2: str, lang: str, arch: str):
+    def show_listos(os2: str, lang: str, arch: str, cache: Man_cache,
+                    cmdversion: str, cmddate: str):
         mainfunc = Mainfunc
+        mmanfunc = Mmanfunc
+        http_header: Opt_http_header = Opt_http_header()
+        http_header.x_mman_enable = 'YES'
+        http_header.user_agent = mmanfunc.createstr_cmdname(
+            os2, lang, arch) + '/{0}'.format(cmdversion)
         roottomlobj = Man_roottoml()
         roottomlobj.og_vernamekey = '@LATEST-RELEASE'
         roottomlobj.og_manhashfpath = ''
@@ -718,6 +1167,10 @@ class _Main_man(object):
         roottomlobj.og_manenv_os2 = os2
         roottomlobj.og_manenv_lang = lang
         roottomlobj.og_manenv_arch = arch
+        roottomlobj.og_cmdversion = cmdversion
+        roottomlobj.og_cmddate = cmddate
+        roottomlobj.og_rooturls = cache.load_rooturls()
+        roottomlobj.og_http_header = http_header
         roottomlobj.make()
         rootdic: typing.Final[dict] = roottomlobj._rootdic
         osnames = [osname for vername, osname, status,
@@ -726,42 +1179,49 @@ class _Main_man(object):
         exit(0)
 
     @staticmethod
-    def getstring_pagerurl(pagerurl: str, hashdg: str) -> tuple[str, bytes]:
-        mainfunc = Mainfunc
-        reterr: typing.Final[tuple] = ('', b'')
-        b: bytes = b''
-        if pagerurl.endswith('.gz'):
-            gzbys: bytes = b''
-            pagerstr: str = ''
-            gzbys = mainfunc.loadbytes_url(pagerurl, exception=False)
-            if len(gzbys) == 0:
-                return reterr
-            try:
-                b = gzip.decompress(gzbys)
-            except:
-                return reterr
-            hobj = hashlib.new('SHA3-256')
-            hobj.update(gzbys)
-            if hashdg != hobj.hexdigest():
-                return reterr
-            pagerstr = b.decode('UTF-8')
-            return (pagerstr, gzbys)
-        else:
-            print(
-                'Warning: Non-gz files are deprecated and will no longer be supported in the future.')
-            b = mainfunc.loadbytes_url(pagerurl, exception=False)
-            if len(b) == 0:
-                return reterr
-            hobj = hashlib.new('SHA3-256')
-            hobj.update(b)
-            if hashdg != hobj.hexdigest():
-                return reterr
-            return (b.decode('UTF-8'), b'')
+    def getstring_pagerurl(pagerurls: tuple, hashdg: str,
+                           http_header: Opt_http_header,
+                           fastestdomain: str) -> Np_getstring_pagerurl:
+        retempty: typing.Final[Np_getstring_pagerurl] = Np_getstring_pagerurl(
+            pagerstr='', gzbys=b'')
+        chklist: list = [True for url in pagerurls if url.endswith('.gz')]
+        if len(chklist) == len(pagerurls):
+            loadurl = Man_loadurl()
+            loadurl.header_x_mman_enable = http_header.x_mman_enable
+            loadurl.header_user_agent = http_header.user_agent
+            loadurl.header_x_mman_roottomlid = http_header.x_mman_roottomlid
+            loadurl.header_x_mman_mantomlid = http_header.x_mman_mantomlid
+            loadurl.timeout = 0.8
+            loadurl.fastestdomain = fastestdomain
+            loadurl.urls = pagerurls
+            pager: Man_loadurl_getnpdata = loadurl.getdata()
+            if not pager.compare(hashdg):
+                return retempty
+            gzbys: bytes = pager.data
+            pagerstr: str = pager.gzdecompress_string()
+            ret: typing.Final = Np_getstring_pagerurl(
+                pagerstr=pagerstr, gzbys=gzbys)
+            return ret
+        print('Warning: Non-gz files are deprecated and will no longer be supported in the future.')
+        loadurl = Man_loadurl()
+        loadurl.header_x_mman_enable = http_header.x_mman_enable
+        loadurl.header_user_agent = http_header.user_agent
+        loadurl.header_x_mman_roottomlid = http_header.x_mman_roottomlid
+        loadurl.header_x_mman_mantomlid = http_header.x_mman_mantomlid
+        loadurl.timeout = 0.8
+        loadurl.fastestdomain = fastestdomain
+        loadurl.urls = pagerurls
+        pager: Man_loadurl_getnpdata = loadurl.getdata()
+        if not pager.compare(hashdg):
+            return retempty
+        pagerstr: str = pager.gzdecompress_string()
+        ret: typing.Final = Np_getstring_pagerurl(pagerstr=pagerstr, gzbys=b'')
+        return ret
 
 
 class Main_manXXYY(object):
-    version:     str = '0.0.8'
-    versiondate: str = '1 Jan 2024'
+    version:     typing.Final[str] = '0.0.9'
+    versiondate: typing.Final[str] = '13 Jan 2025'
 
     def __init__(self):
         self._manenv_os2: str = ''
@@ -808,7 +1268,7 @@ class Main_manXXYY(object):
         meses =\
             ['{0} written by MikeTurkey'.format(cmdname),
              'ver {0}, {1}'.format(version, versiondate),
-             '2024 Copyright MikeTurkey ALL RIGHT RESERVED.',
+             '2024-2025 Copyright MikeTurkey ALL RIGHT RESERVED.',
              'ABSOLUTELY NO WARRANTY.',
              'Software: GPLv3 License including a prohibition clause for AI training.',
              'Document: {0}'.format(doclicense),
@@ -848,7 +1308,7 @@ class Main_manXXYY(object):
         meses_eng =\
             ['{0} written by MikeTurkey'.format(cmdname),
              'ver {0}, {1}'.format(version, versiondate),
-             '2024 Copyright MikeTurkey ALL RIGHT RESERVED.',
+             '2024-2025 Copyright MikeTurkey ALL RIGHT RESERVED.',
              'ABSOLUTELY NO WARRANTY.',
              'Software: GPLv3 License including a prohibition clause for AI training.',
              '{0}'.format(copyright_engman),
@@ -963,27 +1423,28 @@ class Main_manXXYY(object):
              gui: bool = False, manname: str = '', mannum: str = '', listman: str = '') -> str:
         mainfunc = Mainfunc
         _main_man = _Main_man
+        mmanfunc = Mmanfunc
         self.set_manenv(os2, lang, arch)
         cache = Man_cache()
-        cache.init(os2, lang, arch)
+        cache.init(os2, lang, arch, self.version, self.versiondate)
         cache.mktempdir_ifnot()
         if not gui:
             arg1, arg2, opt = self.create_mainargs()
             vernamekey = opt.release if opt.release != '' else '@LATEST-RELEASE'
             if opt.listos:
-                _main_man.show_listos(
-                    self.manenv_os2, self.manenv_lang, self.manenv_arch)
+                _main_man.show_listos(self.manenv_os2, self.manenv_lang, self.manenv_arch, cache,
+                                      self.version, self.versiondate)
                 exit(0)
             if opt.listman:
                 _main_man.show_listman(vernamekey, self.manenv_os2, self.manenv_lang,
-                                       self.manenv_arch, False)
+                                       self.manenv_arch, False, cache, self.version, self.versiondate)
             chklist: list = [False, opt.listman1, opt.listman2, opt.listman3, opt.listman4,
                              opt.listman5, opt.listman6, opt.listman7, opt.listman8, opt.listman9]
             if any(chklist):
                 n: int = chklist.index(True)
                 if 1 <= n <= 9:
                     _main_man.show_listman_n(n, vernamekey, self.manenv_os2, self.manenv_lang,
-                                             self.manenv_arch, False)
+                                             self.manenv_arch, False, cache, self.version, self.versiondate)
                 errmes = 'Error: Runtime Error. Invalid --listman[N]'
                 raise MmanStdError(errmes)
             if opt.license:
@@ -1002,14 +1463,19 @@ class Main_manXXYY(object):
         s: str = ''
         if gui == True and listman == 'all':
             s = _main_man.show_listman(vernamekey, self.manenv_os2, self.manenv_lang,
-                                       self.manenv_arch, gui)
+                                       self.manenv_arch, gui, cache, self.version, self.versiondate)
             return s
         chktpl: tuple = ('1', '2', '3', '4', '5', '6', '7', '8', '9')
         if gui == True and (listman in chktpl):
             n = int(listman)
             s = _main_man.show_listman_n(n, vernamekey, self.manenv_os2, self.manenv_lang,
-                                         self.manenv_arch, gui)
+                                         self.manenv_arch, gui, cache, self.version, self.versiondate)
             return s
+        http_header: Opt_http_header = Opt_http_header()
+        http_header.x_mman_enable = 'YES'
+        http_header.user_agent = mmanfunc.createstr_cmdname(
+            os2, lang, arch) + '/{0}'.format(self.version)
+        rooturls = cache.load_rooturls()
         roottomlobj = Man_roottoml()
         roottomlobj.og_vernamekey = vernamekey
         roottomlobj.og_manhashfpath = opt.manhashfpath
@@ -1017,7 +1483,17 @@ class Main_manXXYY(object):
         roottomlobj.og_manenv_os2 = self.manenv_os2
         roottomlobj.og_manenv_lang = self.manenv_lang
         roottomlobj.og_manenv_arch = self.manenv_arch
+        roottomlobj.og_cmdversion = self.version
+        roottomlobj.og_cmddate = self.versiondate
+        roottomlobj.og_rooturls = cache.load_rooturls()
+        roottomlobj.og_http_header = http_header
         tomldic = roottomlobj.make()
+        print_fastestdomain = False
+        if print_fastestdomain:
+            print('fastestdomain: ', roottomlobj.fastestdomain)
+        cache.store_rooturls(roottomlobj.rooturls)
+        http_header.x_mman_roottomlid = roottomlobj.og_http_header.x_mman_roottomlid
+        http_header.x_mman_mantomlid = roottomlobj.og_http_header.x_mman_mantomlid
         mantomlobj = Man_mantoml()
         mantomlobj.og_tomldic = tomldic.copy()
         mantomlobj.og_osname_root = roottomlobj.osname
@@ -1025,27 +1501,26 @@ class Main_manXXYY(object):
         mantomlobj.og_manname = opt.manname
         mantomlobj.og_baseurls = roottomlobj.baseurls
         mantomlobj.og_fnamemode = 'hash'
-        urlhashlist: typing.Final[list] = mantomlobj.make()
-        if len(urlhashlist) == 0 and gui == False:
+        manpg: tuple = mantomlobj.make()
+        pagerurls: tuple = manpg.pagerurls
+        hashdg: str = manpg.hashdg
+        if len(manpg.pagerurls) == 0 and gui == False:
             errmes = 'Error: Not found the manual name. [{0}]'.format(
                 opt.manname)
             raise MmanStdError(errmes)
-        elif len(urlhashlist) == 0 and gui == True:
+        elif len(manpg.pagerurls) == 0 and gui == True:
             return ''
         pagerstr: str = ''
         gzbys: bytes = b''
         pcache = Man_pagercache()
         pcache.init(cache.tmpdir)
-        pagerurl: str = urlhashlist[0][0]
+        pagerurl: str = manpg.pagerurls[0]
         hit, pagerstr = pcache.get_pager(pagerurl)
+        hit = False
         if hit != True:
-            pagerstr = ''
-            for tpl in urlhashlist:
-                pagerurl, hashdg = tpl
-                pagerstr, gzbys = _main_man.getstring_pagerurl(
-                    pagerurl, hashdg)
-                if pagerstr != '':
-                    break
+            pagerstr, gzbys = _main_man.getstring_pagerurl(manpg.pagerurls, manpg.hashdg,
+                                                           http_header,
+                                                           roottomlobj.fastestdomain)
         if pagerstr == '':
             errmes = 'Error: Not found the url. [{0}]'.format(pagerurl)
             raise MmanStdError(errmes)
@@ -1137,7 +1612,7 @@ class Main_mman(object):
         meses: typing.Final[list] =\
             ['mman written by MikeTurkey',
              'ver {0}, {1}'.format(version, versiondate),
-             '2024 Copyright MikeTurkey ALL RIGHT RESERVED.',
+             '2024-2025 Copyright MikeTurkey ALL RIGHT RESERVED.',
              'ABSOLUTELY NO WARRANTY.',
              'Software: GPLv3 License including a prohibition clause for AI training.',
              '',
@@ -1179,7 +1654,11 @@ class Main_mman(object):
 
 def main_manenfb():
     cls = Main_manXXYY()
-    cls.main(os2='fb', lang='eng', arch='arm64')
+    try:
+        cls.main(os2='fb', lang='eng', arch='arm64')
+    except MmanStdError as e:
+        print(e, file=sys.stderr)
+        exit(1)
     return
 
 
@@ -1195,7 +1674,11 @@ def main_manjpfb():
 
 def main_manenob():
     cls = Main_manXXYY()
-    cls.main(os2='ob', lang='eng', arch='arm64')
+    try:
+        cls.main(os2='ob', lang='eng', arch='arm64')
+    except MmanStdError as e:
+        print(e, file=sys.stderr)
+        exit(1)
     return
 
 

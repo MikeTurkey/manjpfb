@@ -4,7 +4,7 @@
 ######################################################################
 #
 # SNAKELAND, Instant python script installer.
-# Copyright (C) 2023 Takaaki Watanabe as Mike Turkey
+# Copyright 2023-2025 MikeTurkey ALL RIGHT RESERVED.
 # contact: voice[ATmark]miketurkey.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -73,6 +73,14 @@ find_python3path(){
     echo "$PYTHONPATH"
     return
 }
-PYTHON=$(find_python3path)
+make_PYTHON(){
+    local PYTHONPATH
+    PYTHONPATH=$(command -v python3)
+    if ! test -z "$PYTHONPATH"; then
+	echo "$PYTHONPATH"; return; fi
+    find_python3path
+    return;
+}
+PYTHON=$(make_PYTHON)
 exec "$PYTHON" "$SNAKELANDPY" "$@"
 

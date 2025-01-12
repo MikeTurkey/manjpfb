@@ -1,0 +1,39 @@
+
+### snakeland history ### 
+
+ver 0.0.6, 12 Jan 2025
+  Bugfix, snakeland on multiusers does not work.
+    Change cache directory hierarchy.
+
+ver 0.0.5, 11 Jan 2025
+  Bugfix, If no DSTMANDIR, SRCMANFILES in config, it does not work.
+
+ver 0.0.4, 3 Jan 2025
+  Bugfix, Enable to install by get-mk1pass.sh
+  Add DSTMANDIR, SRCMANFILES in config.
+  Faster snakeland.py, snakeland.sh
+  Create cache file.
+
+ver 0.0.3, 17 Nov 2024
+  Enable to install on Linux.(Experimental)
+  Enable to install on OpenBSD(Experimetal)
+  Create snakeland.1 man once again.
+  Rewrite README.rst
+  Config Variable names are changed.
+    PKGNAME: new
+    CMDNAME001-009  : old CMDNAME
+    PY3TARGET001-999: old TARGETPY3
+    CMDTARGET001-000: old TARGETCMD
+  Enable to create multi-command.
+  'install' subcmd name is changed to 'install-byconf'.
+  Create 'uninstall' sub command.
+
+Ver 0.0.2, 26 Nov 2024
+  Faster findpy3 sub command.
+  Delete .dusg files.
+  Add pypi metadata.
+  Update LICENSE a little.
+  install.sh install snakeland.1 or snakeland.1.gz to Mandir. (Experimental)
+
+Ver 0.0.1, 25 Nov 2023
+  initial version

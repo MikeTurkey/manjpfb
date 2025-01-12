@@ -4,7 +4,7 @@
 ######################################################################
 #
 # SNAKELAND, Instant python script installer.
-# Copyright (C) 2023-2024 Mike Turkey
+# Copyright 2023-2025 MikeTurkey ALL RIGHT RESERVED.
 # contact: voice[ATmark]miketurkey.com
 #
 # This program is free software: you can redistribute it and/or modify
@@ -69,12 +69,48 @@ install_cmd(){
 check_rootuser(){
     local ARGSUSER TMP_USER
     ARGSUSER='root'
-    TMP_USER=$(id -p | grep uid | awk '{print $2}')
+    case "$(uname -s)" in
+	'Darwin' | 'FreeBSD')
+	    TMP_USER=$(id -p | grep uid | awk '{print $2}')
+	    ;;
+	'Linux')
+	    TMP_USER=$(id -u -n)
+	    ;;
+	*)
+	    TMP_USER=$(id -p | grep uid | awk '{print $2}')
+	    ;;
+    esac
     if test "$ARGSUSER" != "$TMP_USER"; then
         echo 'Error: Not root user.' " [uid: $TMP_USER]"
-        exit 1
+       exit 1
     fi
     return
+}
+install_snakelandman(){
+    local ON_GZ ON_TXT
+    ON_GZ='No'
+    ON_TXT='No'
+    case $(uname -s) in
+	'FreeBSD')
+	    ON_GZ='YES';;
+	'OpenBSD')
+	    ON_GZ='YES';;
+	'Linux')
+	    ON_GZ='YES';;
+	'Darwin')
+	    ON_TXT='YES';;
+	*)
+	    echo 'Error: Unsupport OS.'
+	    exit 1
+    esac
+    if test "$ON_GZ" = 'YES'; then
+	install -m 644 "$SNAKELANDMANGZ"  "$TARGETMANDIR" || exit 1	
+	return; 
+    elif test "$ON_TXT" = 'YES'; then
+	install -m 644 "$SNAKELANDMAN"  "$TARGETMANDIR" || exit 1	
+	return; fi
+    echo 'Error: Runtime Error.'
+    exit 1
 }
 check_rootuser
 if ! test -d "$TARGETDIR"; then
@@ -82,7 +118,7 @@ if ! test -d "$TARGETDIR"; then
 	echo 'Error: Can not make the directory.' " [$TARGETDIR]" > /dev/stderr
 	exit 1; fi
 fi
-for F in "$SNAKELANDSH" "$SNAKELANDPY" "$SNAKELANDMAN" "$SNAKELANDMANGZ"; do
+for F in "$SNAKELANDSH" "$SNAKELANDPY" "$SNAKELANDMAN"; do
     if ! test -r "$F"; then
 	echo 'Error: Not found source file.' " [$F]" > /dev/stderr
 	exit 1; fi
@@ -92,16 +128,10 @@ if ! test -d "$TARGETMANDIR"; then
 	echo 'Error: Can not make man directory.' " [$TARGETMANDIR]"
 	exit 1; fi
 fi
-cp -f "$SNAKELANDSH"   "$TARGETDIR" || exit 1
-cp -f "$SNAKELANDPY"   "$TARGETDIR" || exit 1
-case $(uname -s) in
-     'Darwin')
-	 cp -f "$SNAKELANDMAN"  "$TARGETMANDIR" || exit 1
-	 ;;
-     *)
-	 cp -f "$SNAKELANDMANGZ"  "$TARGETMANDIR" || exit 1
-	 ;;
-esac
+install "$SNAKELANDSH"   "$TARGETDIR" || exit 1
+install -m 644 "$SNAKELANDPY"   "$TARGETDIR" || exit 1
+install_snakelandman
+install -m 644 "$SNAKELANDMAN"  "$TARGETMANDIR" || exit 1
 F=$(basename "$SNAKELANDSH")
 TARGETCMD="$TARGETDIR"/"$F"
 install_cmd "$CMDDIR" "$CMDNAME" "$TARGETCMD"

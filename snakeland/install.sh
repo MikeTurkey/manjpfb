@@ -4,7 +4,7 @@
 ######################################################################
 #
 # SNAKELAND, Instant python script installer.
-# Copyright (C) 2023 Takaaki Watanabe as Mike Turkey
+# Copyright 2023-2025 MikeTurkey ALL RIGHT RESERVED.
 # contact: voice[ATmark]miketurkey.com
 #
 # This program is free software: you can redistribute it and/or modify

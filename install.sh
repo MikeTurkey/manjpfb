@@ -15,7 +15,7 @@ check_rootuser(){
     local ARGSUSER TMP_USER
     ARGSUSER='root'
     case "$(uname -s)" in
-	'Darwin' | 'FreeBSD')
+	'Darwin' | 'FreeBSD' | 'OpenBSD')
 	    TMP_USER=$(id -p | grep uid | awk '{print $2}')
 	    ;;
 	'Linux')
@@ -45,5 +45,5 @@ if ! snakeland --version > /dev/null 2>&1; then
     "$INSTALLSNAKE" || exit 1
 fi
 
-snakeland install "$CONF"  || exit 1
+snakeland install-byconf "$CONF"  || exit 1
 exit 0

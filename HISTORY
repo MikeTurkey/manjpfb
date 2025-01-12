@@ -1,4 +1,12 @@
 
+ver 0.0.9, 13 Jan 2025
+  Bugfix, --license incorrect document.
+  Add http header.
+  Create Man_loadurl and so on class.
+  Change WEBDBNUM to '1002'.
+  Change to New server.
+  Change cache directory hierarchy.
+
 ver 0.0.8, 2 Jan 2025
   New Exception, MmanStdError handling.
   New --license option.
