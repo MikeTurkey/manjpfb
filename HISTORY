@@ -1,4 +1,9 @@
 
+ver 0.0.10, 15 Jan 2025
+  Update snakeland version 0.0.7.
+  Bugfix, manjpfb on multiusers does not work.
+  Change cache directory hierarchy.
+
 ver 0.0.9, 13 Jan 2025
   Bugfix, --license incorrect document.
   Add http header.

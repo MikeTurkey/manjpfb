@@ -1220,8 +1220,8 @@ class _Main_man(object):
 
 
 class Main_manXXYY(object):
-    version:     typing.Final[str] = '0.0.9'
-    versiondate: typing.Final[str] = '13 Jan 2025'
+    version:     typing.Final[str] = '0.0.10'
+    versiondate: typing.Final[str] = '15 Jan 2025'
 
     def __init__(self):
         self._manenv_os2: str = ''

@@ -3,7 +3,7 @@ snakeland
 ********************************
 
  | snakeland created by MikeTurkey
- | Version 0.0.6, 12 Jan 2025
+ | Version 0.0.7, 14 Jan 2025
  | 2023-2025, COPYRIGHT MikeTurkey, All Right Reserved.
  | ABSOLUTELY NO WARRANTY. The Licence is based on GPLv3.
  | URL: https://miketurkey.com

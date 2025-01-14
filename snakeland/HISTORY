@@ -1,6 +1,9 @@
 
 ### snakeland history ### 
 
+ver 0.0.7, 14 Jan 2025
+  Bugfix, Do not work that it's config is not current directory.
+
 ver 0.0.6, 12 Jan 2025
   Bugfix, snakeland on multiusers does not work.
     Change cache directory hierarchy.

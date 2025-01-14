@@ -308,6 +308,7 @@ class ConfParser_snakeland():
         self._srcdict_keys: list = ['DSTDIR', 'DSTABSDIR', 'FMODE']
         self._rawconflst: list = []
         self._configfpath: str = ''
+        self._confdir: str = ''
         self._pass_analyze: bool = False
         self._pass_check: bool = False
         self._pass_normalize: bool = False
@@ -316,6 +317,10 @@ class ConfParser_snakeland():
     @property
     def configfpath(self) -> str:
         return self._configfpath
+
+    @property
+    def confdir(self) -> str:
+        return self._confdir
 
     def print_attribute(self):
         for k, v in self.__dict__.items():
@@ -457,6 +462,7 @@ class ConfParser_snakeland():
             print(errmes, file=sys.stderr)
             exit(1)
         self._configfpath = conf
+        self._confdir = os.path.dirname(conf)
         self._load_df()
         self._load_src()
         return
@@ -524,6 +530,26 @@ class ConfParser_snakeland():
             exit(1)
         self._pass_analyze = True
         return
+
+    @staticmethod
+    def abspath_byconfdir(confdir: str, fpath: str) -> str:
+        chklist: list = [(confdir, 'confdir'), (fpath, 'fpath')]
+        for v, vname in chklist:
+            if isinstance(v, str) != True:
+                errmes: str = 'Error: {0} is NOT string.'.format(vname)
+                raise TypeError(errmes)
+        if os.path.isabs(confdir) != True:
+            errmes = 'Error: confdir is NOT absolute path. [{0}]'.format(
+                confdir)
+            raise ValueError(errmes)
+        if os.path.isabs(fpath) != True and fpath.startswith('~') != True:
+            return os.path.abspath(os.path.join(confdir, fpath))
+        absfpath: str = os.path.expanduser(
+            fpath) if fpath.startswith('~') else fpath
+        if pathlib.Path(absfpath).is_relative_to(confdir):
+            return absfpath
+        else:
+            return ''
 
     @staticmethod
     def _check_PY3VERSION(var: str):
@@ -698,13 +724,19 @@ class ConfParser_snakeland():
             exit(1)
         if len(var) >= 1:
             for s in var:
-                f = os.path.abspath(os.path.expanduser(s))
+                f = self.abspath_byconfdir(self.confdir, s)
                 if os.path.isfile(f) != True:
                     errmes = 'Error: Not found the SRCMANFILES file. [{0}]'.format(
                         s)
                     print_err(errmes)
                     exit(1)
         for srcfpath, vdict in srcdict.items():
+            f = self.abspath_byconfdir(self.confdir, srcfpath)
+            if os.path.isfile(f) != True:
+                errmes = 'Error: Not found the Section key file. [{0}]'.format(
+                    srcfpath)
+                print_err(errmes)
+                exit(1)
             varname = 'DSTDIR'
             value = vdict.get(varname, '')
             if os.path.isabs(os.path.expanduser(value)) == True:
@@ -801,17 +833,17 @@ class ConfParser_snakeland():
         if len(srcmanfiles) == 0:
             return tuple()
 
-        def func(f: str) -> str:
-            d: str = os.path.dirname(self.configfpath)
-            fpath: str = os.path.abspath(d + '/' + f)
-            if os.path.isfile(fpath) != True:
-                errmes = 'Error: Not found the SRCMANFILES file. [{0}]'.format(
-                    fpath)
+        def func(x): return self.abspath_byconfdir(self.confdir, x)
+        tmplist: list = [(f, func(f)) for f in srcmanfiles]
+        f: str = ''
+        absf: str = ''
+        for f, absf in tmplist:
+            if os.path.isfile(absf) != True:
+                errmes = 'Error: Not found the Section key file. [{0}]'.format(
+                    f)
                 print_err(errmes)
                 exit(1)
-            return fpath
-        tmplist: list = [func(f) for f in srcmanfiles]
-        return tuple(tmplist)
+        return tuple([absf for f, absf in tmplist])
 
     def normalize(self):
         def abspath(x): return os.path.abspath(os.path.expanduser(x))
@@ -845,7 +877,14 @@ class ConfParser_snakeland():
         dfdict[varname] = var
         srcdict_new: dict = dict()
         vdict_new: dict = dict()
+        srcfpath_abs: str = ''
         for srcfpath, vdict in srcdict.items():
+            srcfpath_abs = self.abspath_byconfdir(self.confdir, srcfpath)
+            if os.path.isfile(srcfpath_abs) != True:
+                errmes = 'Error: Not found section key file. [{0}]'.format(
+                    srcfpath)
+                print_err(errmes)
+                exit(1)
             vdict_new = dict()
             varname = 'DSTDIR'
             value = vdict.get(varname, '')
@@ -877,7 +916,7 @@ class ConfParser_snakeland():
                 vdict_new[varname] = value
             else:
                 vdict_new[varname] = '644'
-            srcdict_new[srcfpath] = vdict_new.copy()
+            srcdict_new[srcfpath_abs] = vdict_new.copy()
             del vdict_new
         self.dfdict = dfdict
         self.srcdict = srcdict_new
@@ -1242,8 +1281,8 @@ class Snakeland_uninstall(object):
 
 
 class Main_snakeland():
-    version = '0.0.6'
-    date = '12 Jan 2025'
+    version = '0.0.7'
+    date = '14 Jan 2025'
 
     @staticmethod
     def show_version():
@@ -1511,6 +1550,7 @@ class Main_snakeland():
         dstfpath: str = ''
         configdir: str = os.path.dirname(config)
         receipt: list = list()
+        verbose: bool = False
         if dryrun:
             print('Dryrun: make directory.')
         else:
@@ -1524,7 +1564,7 @@ class Main_snakeland():
                     exit(1)
         receipt.append(dstbasedir)
         for f, vdict in srcdict.items():
-            srcfpath = os.path.abspath(configdir + '/' + f)
+            srcfpath = f
             fmode = int(vdict['FMODE'], base=8)
             if dryrun:
                 print('Dryrun: copy, {0} to {1}'.format(
@@ -1554,6 +1594,9 @@ class Main_snakeland():
                         fmode, dstfpath)
                     print_err(errmes)
                     exit(1)
+                if verbose:
+                    mes: str = 'Copied: {0}'.format(srcfpath)
+                    print(mes)
         return receipt
 
     @staticmethod
